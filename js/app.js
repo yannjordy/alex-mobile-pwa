@@ -375,5 +375,9 @@ function showToast(msg) { toast.textContent = msg; toast.classList.add('show'); 
 
 // ─── Service Worker ───
 function registerServiceWorker() {
-  if ('serviceWorker' in navigator) { navigator.serviceWorker.register('service-worker.js').catch(() => {}); }
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js', { scope: './' })
+      .then(reg => console.log('SW registered:', reg.scope))
+      .catch(err => console.log('SW registration failed:', err));
+  }
 }
