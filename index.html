@@ -6884,6 +6884,177 @@ sliderWrap.addEventListener('touchend', e => {
 
 /* Orb 3D animé via stage3d */
 </script>
+<script>var API = localStorage.getItem('alex_api') || location.origin;</script>
+<script>
+/* ===== PWA: event listeners pour GitHub Pages (hors Electron) ===== */
+(function(){
+  if(typeof require !== 'undefined') return; // Electron gère déjà tout
+
+  const chatArea = document.getElementById('chatArea');
+  const menuBtn = document.getElementById('menuBtn');
+  const chatMenu = document.getElementById('chatMenu');
+  const cmList = document.getElementById('cmList');
+  const cmSearch = document.getElementById('cmSearch');
+  const cmNewChat = document.getElementById('cmNewChat');
+  const cmClearAll = document.getElementById('cmClearAll');
+  const newChatBtn = document.getElementById('newChatBtn');
+  const toolsBtn = document.getElementById('toolsBtn');
+  const toolsDropdown = document.getElementById('toolsDropdown');
+  const settingsBtn = document.getElementById('settingsBtn');
+  const dashOverlay = document.getElementById('dashOverlay');
+  const dashClose = document.getElementById('dashClose');
+
+  let cmAll = [];
+
+  function escapeHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function openChatMenu(){
+    menuBtn.classList.add('open');
+    chatMenu.classList.remove('hidden');
+    cmSearch.value = '';
+    fetch(API + '/history')
+      .then(r=>r.json())
+      .then(data=>{
+        cmAll = buildConversations(data.messages || []);
+        renderCmlist();
+      })
+      .catch(()=>{ cmAll=[]; renderCmlist(); });
+    setTimeout(()=>{ if(!chatMenu.classList.contains('hidden')) cmSearch.focus(); }, 40);
+  }
+
+  function closeChatMenu(){
+    menuBtn.classList.remove('open');
+    chatMenu.classList.add('hidden');
+  }
+
+  function renderCmlist(q){
+    const query = (q||'').trim().toLowerCase();
+    if(!cmAll.length){
+      cmList.innerHTML = '<div class="cm-empty">Aucune conversation.</div>';
+      return;
+    }
+    const parts = [];
+    for(let i=0;i<cmAll.length;i++){
+      if(query && !(cmAll[i].q + ' ' + cmAll[i].a).toLowerCase().includes(query)) continue;
+      parts.push('<div class="cm-item" data-i="'+i+'"><span class="cm-q">'+escapeHtml(cmAll[i].q)+'</span><span class="cm-a">'+escapeHtml(cmAll[i].a)+'</span><button class="cm-del" data-i="'+i+'" title="Supprimer">✕</button></div>');
+    }
+    cmList.innerHTML = parts.length ? parts.join('') : '<div class="cm-empty">Aucun résultat.</div>';
+    cmList.querySelectorAll('.cm-item').forEach(el=>{
+      el.addEventListener('click', (e)=>{
+        if(e.target.closest('.cm-del')) return;
+        loadConversation(+el.dataset.i);
+        closeChatMenu();
+      });
+    });
+    cmList.querySelectorAll('.cm-del').forEach(btn=>{
+      btn.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        const idx = +btn.dataset.i;
+        if(confirm('Supprimer cette conversation ?')){
+          cmAll.splice(idx,1);
+          renderCmlist(cmSearch.value);
+        }
+      });
+    });
+  }
+
+  function loadConversation(i){
+    const msgs = cmAll[i].full.slice().reverse();
+    chatArea.innerHTML = '';
+    for(const m of msgs){
+      const div = document.createElement('div');
+      div.className = 'msg ' + (m.role==='user' ? 'user' : 'alex');
+      div.textContent = m.content;
+      chatArea.appendChild(div);
+    }
+    if(chatArea.scrollTop !== undefined) chatArea.scrollTop = chatArea.scrollHeight;
+  }
+
+  function buildConversations(messages){
+    const chrono = messages.slice().reverse();
+    const turns = [];
+    let cur = null;
+    for(const m of chrono){
+      if(m.role==='user'){
+        if(cur) turns.push(cur);
+        cur = { q:m.content, a:'', full:[m] };
+      } else if(cur){
+        cur.full.push(m);
+        cur.a = m.content.slice(0,140);
+      }
+    }
+    if(cur) turns.push(cur);
+    turns.reverse();
+    return turns.map(t=>({ q:t.q.slice(0,90)||'(vide)', a:t.a, full:t.full }));
+  }
+
+  // Menu hamburger
+  if(menuBtn) menuBtn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    if(chatMenu.classList.contains('hidden')) openChatMenu();
+    else closeChatMenu();
+  });
+  if(cmSearch) cmSearch.addEventListener('input', ()=> renderCmlist());
+  if(cmNewChat) cmNewChat.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    chatArea.innerHTML = '';
+    closeChatMenu();
+  });
+  if(cmClearAll) cmClearAll.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    if(!confirm('Supprimer toutes les conversations ?')) return;
+    fetch(API + '/history', {method:'DELETE'}).then(()=>{ cmAll=[]; renderCmlist(); }).catch(()=>{});
+  });
+  if(newChatBtn) newChatBtn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    chatArea.innerHTML = '';
+    cid = crypto.randomUUID();
+  });
+
+  // Fermer le menu en cliquant à l'extérieur
+  document.addEventListener('click', (e)=>{
+    if(!chatMenu.classList.contains('hidden') && !chatMenu.contains(e.target) && e.target !== menuBtn){
+      closeChatMenu();
+    }
+  });
+
+  // Escape
+  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeChatMenu(); });
+
+  // Tools dropdown
+  if(toolsBtn && toolsDropdown){
+    toolsBtn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      toolsDropdown.classList.toggle('open');
+    });
+    document.addEventListener('click', (e)=>{
+      if(!toolsDropdown.contains(e.target)) toolsDropdown.classList.remove('open');
+    });
+  }
+
+  // Settings (ouvre le dashboard)
+  if(settingsBtn) settingsBtn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    if(dashOverlay) dashOverlay.classList.add('open');
+  });
+  if(dashClose) dashClose.addEventListener('click', ()=>{
+    if(dashOverlay) dashOverlay.classList.remove('open');
+  });
+  if(dashOverlay) dashOverlay.addEventListener('click', (e)=>{
+    if(e.target === dashOverlay) dashOverlay.classList.remove('open');
+  });
+
+  // Dashboard tabs
+  document.querySelectorAll('.dash-tab').forEach(tab=>{
+    tab.addEventListener('click', ()=>{
+      document.querySelectorAll('.dash-tab, .dash-section').forEach(el=> el.classList.remove('active'));
+      tab.classList.add('active');
+      const sec = document.getElementById('sec-'+tab.dataset.tab);
+      if(sec) sec.classList.add('active');
+    });
+  });
+})();
+</script>
 <div id="toast" style="position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(15,18,28,0.95);border:1px solid rgba(255,157,61,0.3);border-radius:12px;padding:10px 20px;font-size:14px;color:#fff6ea;opacity:0;transition:all 0.3s;z-index:9999;pointer-events:none;backdrop-filter:blur(10px)"></div>
 <div id="sidebarOverlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:90;display:none;backdrop-filter:blur(4px)"></div>
 <script src="js/app.js"></script>
