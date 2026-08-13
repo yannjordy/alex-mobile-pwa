@@ -11,18 +11,18 @@ let audioPlayer = new Audio(), speechQueue = [], queuePlaying = false, micActive
 
 const $ = (sel) => document.querySelector(sel);
 const chatArea = $('#chatArea');
-const msgInput = $('#msgInput');
+const msgInput = $('#msgInput') || $('#textInput');
 const sendBtn = $('#sendBtn');
 const stopBtn = $('#stopBtn');
 const micBtn = $('#micBtn');
 const emptyState = $('#emptyState');
-const statusBar = $('#statusBar');
+const statusBar = $('#statusBar') || $('#statusOverlay');
 const statusText = $('#statusText');
 const statusDot = $('#statusDot');
-const sidebar = $('#sidebar');
+const sidebar = $('#chatMenu');
 const sidebarOverlay = $('#sidebarOverlay');
 const settingsPanel = $('#settingsPanel');
-const historyList = $('#historyList');
+const historyList = $('#cmList') || $('#historyList');
 const mediaViewer = $('#mediaViewer');
 const toast = $('#toast');
 const quickActions = $('#quickActions');
@@ -34,7 +34,7 @@ function init() {
   checkBackendStatus();
   loadSettings();
   registerServiceWorker();
-  setTimeout(() => quickActions.classList.add('visible'), 1000);
+  if (quickActions) setTimeout(() => quickActions.classList.remove('hidden'), 1000);
   if (!localStorage.getItem(CONFIG.storageKeys.api)) promptForUrl();
 }
 
@@ -48,16 +48,18 @@ function promptForUrl() {
 }
 
 function setupEventListeners() {
-  msgInput.addEventListener('input', handleInput);
-  msgInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
-  sendBtn.addEventListener('click', sendMessage);
-  stopBtn.addEventListener('click', stopAlex);
-  micBtn.addEventListener('click', toggleMic);
-  
+  if (msgInput) {
+    msgInput.addEventListener('input', handleInput);
+    msgInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
+  }
+  if (sendBtn) sendBtn.addEventListener('click', sendMessage);
+  if (stopBtn) stopBtn.addEventListener('click', stopAlex);
+  if (micBtn) micBtn.addEventListener('click', toggleMic);
+
   document.querySelectorAll('.quick-pill').forEach(btn => {
     btn.addEventListener('click', () => {
       const msg = btn.dataset.msg;
-      if (msg) {
+      if (msg && msgInput) {
         msgInput.value = msg;
         handleInput();
         sendMessage();
@@ -65,66 +67,90 @@ function setupEventListeners() {
     });
   });
 
-  $('#menuBtn').addEventListener('click', openSidebar);
-  sidebarOverlay.addEventListener('click', closeSidebar);
-  $('#closeSidebar').addEventListener('click', closeSidebar);
-  $('#newChatBtn').addEventListener('click', newChat);
-  $('#settingsBtn').addEventListener('click', openSettings);
-  $('#closeSettings').addEventListener('click', closeSettings);
-  $('#saveSettings').addEventListener('click', saveSettings);
-  $('#cfgUrl').addEventListener('change', () => {});
-  $('#cfgVoiceEnabled').addEventListener('change', (e) => {
-    voiceEnabled = e.target.checked;
-    localStorage.setItem(CONFIG.storageKeys.voiceEnabled, voiceEnabled);
-  });
-  $('#btnClearHist').addEventListener('click', clearHistory);
+  const menuBtn = $('#menuBtn');
+  if (menuBtn) menuBtn.addEventListener('click', openSidebar);
+  if (sidebarOverlay) sidebarOverlay.addEventListener('click', closeSidebar);
+  
+  const closeSidebarBtn = $('#closeSidebar') || $('.cm-head button');
+  if (closeSidebarBtn) closeSidebarBtn.addEventListener('click', closeSidebar);
+  
+  const newChatBtn = $('#newChatBtn') || $('#cmNewChat');
+  if (newChatBtn) newChatBtn.addEventListener('click', newChat);
+  
+  const settingsBtn = $('#settingsBtn');
+  if (settingsBtn) settingsBtn.addEventListener('click', openSettings);
+  
+  const closeSettingsBtn = $('#closeSettings');
+  if (closeSettingsBtn) closeSettingsBtn.addEventListener('click', closeSettings);
+
+  const cfgVoiceEnabled = $('#cfgVoiceEnabled');
+  if (cfgVoiceEnabled) {
+    cfgVoiceEnabled.addEventListener('change', (e) => {
+      voiceEnabled = e.target.checked;
+      localStorage.setItem(CONFIG.storageKeys.voiceEnabled, voiceEnabled);
+    });
+  }
+
+  const btnClearHist = $('#btnClearHist') || $('#cmClearAll');
+  if (btnClearHist) btnClearHist.addEventListener('click', clearHistory);
 
   // Install button
   let deferredPrompt;
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
-    $('#installBtn').classList.add('visible');
+    const installBtn = $('#installBtn');
+    if (installBtn) installBtn.classList.remove('hidden');
   });
-  $('#installBtn').addEventListener('click', async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') showToast('Alex installé !');
-      deferredPrompt = null;
-      $('#installBtn').classList.remove('visible');
-    }
-  });
+  
+  const installBtn = $('#installBtn');
+  if (installBtn) {
+    installBtn.addEventListener('click', async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') showToast('Alex installé !');
+        deferredPrompt = null;
+        installBtn.classList.add('hidden');
+      }
+    });
+  }
 
-  $('#mvClose').addEventListener('click', closeMediaViewer);
-  mediaViewer.addEventListener('click', (e) => {
-    if (e.target === mediaViewer) closeMediaViewer();
-  });
+  const mvClose = $('#mvClose');
+  if (mvClose) mvClose.addEventListener('click', closeMediaViewer);
+  if (mediaViewer) {
+    mediaViewer.addEventListener('click', (e) => {
+      if (e.target === mediaViewer) closeMediaViewer();
+    });
+  }
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      if (mediaViewer.classList.contains('visible')) closeMediaViewer();
-      else if (settingsPanel.classList.contains('visible')) closeSettings();
-      else if (sidebar.classList.contains('open')) closeSidebar();
+      if (mediaViewer && mediaViewer.style.display !== 'none') closeMediaViewer();
+      else if (settingsPanel && settingsPanel.style.display !== 'none') closeSettings();
+      else if (sidebar && sidebar.classList.contains('open')) closeSidebar();
     }
   });
 }
 
 function handleInput() {
+  if (!msgInput) return;
   msgInput.style.height = 'auto';
   msgInput.style.height = Math.min(msgInput.scrollHeight, 100) + 'px';
-  sendBtn.disabled = !msgInput.value.trim();
+  if (sendBtn) sendBtn.disabled = !msgInput.value.trim();
 }
 
 async function sendMessage() {
-  const text = msgInput.value.trim();
+  const text = msgInput ? msgInput.value.trim() : '';
   if (!text || streaming) return;
   if (emptyState) emptyState.style.display = 'none';
-  quickActions.classList.remove('visible');
+  if (quickActions) quickActions.classList.add('hidden');
   addMsg('user', escapeHtml(text));
-  msgInput.value = '';
-  msgInput.style.height = 'auto';
-  sendBtn.disabled = true;
+  if (msgInput) {
+    msgInput.value = '';
+    msgInput.style.height = 'auto';
+  }
+  if (sendBtn) sendBtn.disabled = true;
   await handleAlexReply(text);
 }
 
@@ -149,7 +175,7 @@ function addLoading() {
 }
 
 function scrollToBottom() {
-  requestAnimationFrame(() => { chatArea.scrollTop = chatArea.scrollHeight; });
+  requestAnimationFrame(() => { if (chatArea) chatArea.scrollTop = chatArea.scrollHeight; });
 }
 
 async function handleAlexReply(text) {
@@ -189,7 +215,7 @@ async function handleAlexReply(text) {
             if (!thinking) {
               thinking = document.createElement('div');
               thinking.className = 'msg alex';
-              thinking.innerHTML = '<div class="bubble"><div class="thinking-toggle" style="cursor:pointer;color:var(--text-dim);font-size:12px">🧠 Penser ▸</div><div class="thinking-content" style="display:none;margin-top:8px;padding:8px;background:rgba(255,255,255,0.03);border-radius:8px;font-size:13px;color:var(--text-dim)">' + escapeHtml(p.text) + '</div></div>';
+              thinking.innerHTML = '<div class="bubble"><div class="thinking-toggle" style="cursor:pointer;color:rgba(255,246,234,0.5);font-size:12px">🧠 Penser ▸</div><div class="thinking-content" style="display:none;margin-top:8px;padding:8px;background:rgba(255,255,255,0.03);border-radius:8px;font-size:13px;color:rgba(255,246,234,0.5)">' + escapeHtml(p.text) + '</div></div>';
               chatArea.appendChild(thinking);
               if (ld && ld.parentNode) ld.remove();
               thinking.querySelector('.thinking-toggle').addEventListener('click', function() {
@@ -217,15 +243,15 @@ async function handleAlexReply(text) {
             if (!bubble) { bubble = addMsg('alex', ''); bubble.querySelector('.bubble').innerHTML = ''; }
             const chip = document.createElement('div');
             chip.className = 'tool-chip';
-            chip.style.cssText = 'margin:8px 0;padding:8px 12px;background:rgba(255,157,61,0.05);border:1px solid var(--border);border-radius:8px;font-size:12px';
-            chip.innerHTML = '<div style="color:var(--amber);margin-bottom:4px">' + (p.type === 'tool' ? '🔧' : '▶') + ' ' + escapeHtml(p.tool || p.command || '') + '</div><div style="color:var(--text-dim);white-space:pre-wrap;max-height:100px;overflow:auto">' + escapeHtml((p.result || p.output || '').slice(0, 500)) + '</div>';
+            chip.style.cssText = 'margin:8px 0;padding:8px 12px;background:rgba(255,157,61,0.05);border:1px solid rgba(255,157,61,0.15);border-radius:8px;font-size:12px';
+            chip.innerHTML = '<div style="color:#ffc98c;margin-bottom:4px">' + (p.type === 'tool' ? '🔧' : '▶') + ' ' + escapeHtml(p.tool || p.command || '') + '</div><div style="color:rgba(255,246,234,0.6);white-space:pre-wrap;max-height:100px;overflow:auto">' + escapeHtml((p.result || p.output || '').slice(0, 500)) + '</div>';
             bubble.appendChild(chip);
             scrollToBottom();
             continue;
           }
           if (p.error) {
-            if (bubble) bubble.querySelector('.bubble').innerHTML = '<span style="color:var(--red)">' + escapeHtml(p.error) + '</span>';
-            else { ld.remove(); addMsg('alex', '<span style="color:var(--red)">❌ ' + escapeHtml(p.error) + '</span>'); }
+            if (bubble) bubble.querySelector('.bubble').innerHTML = '<span style="color:#ef5350">' + escapeHtml(p.error) + '</span>';
+            else { ld.remove(); addMsg('alex', '<span style="color:#ef5350">❌ ' + escapeHtml(p.error) + '</span>'); }
             break;
           }
         } catch (e) {
@@ -243,7 +269,7 @@ async function handleAlexReply(text) {
     if (full && voiceEnabled) speakText(stripMdForTTS(full));
   } catch (e) {
     if (ld && ld.parentNode) ld.remove();
-    if (e.name !== 'AbortError') addMsg('alex', '<span style="color:var(--red)">❌ Serveur indisponible.</span>');
+    if (e.name !== 'AbortError') addMsg('alex', '<span style="color:#ef5350">❌ Serveur indisponible.</span>');
   } finally {
     streaming = false;
     abortCtrl = null;
@@ -261,30 +287,30 @@ function stopAlex() {
 }
 
 function showStatus(text) {
-  statusText.textContent = text;
-  statusBar.classList.add('visible');
+  if (statusText) statusText.textContent = text;
+  if (statusBar) statusBar.classList.remove('hidden');
 }
 
 function hideStatus() {
-  statusBar.classList.remove('visible');
+  if (statusBar) statusBar.classList.add('hidden');
 }
 
 function setStreaming(val) {
   streaming = val;
-  stopBtn.classList.toggle('visible', val);
-  sendBtn.classList.toggle('hidden', val);
-  micBtn.classList.toggle('hidden', val);
+  if (stopBtn) stopBtn.classList.toggle('visible', val);
+  if (sendBtn) sendBtn.classList.toggle('hidden', val);
+  if (micBtn) micBtn.classList.toggle('hidden', val);
 }
 
 async function checkBackendStatus() {
   try {
     const res = await fetch(API + '/health', { signal: AbortSignal.timeout(5000) });
     const data = await res.json();
-    statusDot.className = 'status-dot ' + (data.online ? 'online' : '');
+    if (statusDot) statusDot.className = 'status-dot ' + (data.online ? 'online' : '');
     const st = $('#cfgStatus');
     if (st) st.textContent = data.online ? 'Connecté' : 'Déconnecté';
   } catch {
-    statusDot.className = 'status-dot';
+    if (statusDot) statusDot.className = 'status-dot';
     const st = $('#cfgStatus');
     if (st) st.textContent = 'Indisponible';
   }
@@ -292,34 +318,44 @@ async function checkBackendStatus() {
 setInterval(checkBackendStatus, 30000);
 
 // Sidebar
-function openSidebar() { sidebar.classList.add('open'); sidebarOverlay.classList.add('visible'); loadHistory(); }
-function closeSidebar() { sidebar.classList.remove('open'); sidebarOverlay.classList.remove('visible'); }
+function openSidebar() {
+  if (sidebar) sidebar.classList.add('open');
+  if (sidebarOverlay) sidebarOverlay.classList.remove('hidden');
+  loadHistory();
+}
+
+function closeSidebar() {
+  if (sidebar) sidebar.classList.remove('open');
+  if (sidebarOverlay) sidebarOverlay.classList.add('hidden');
+}
+
 function newChat() {
-  chatArea.innerHTML = '';
+  if (chatArea) chatArea.innerHTML = '';
   cid = crypto.randomUUID();
-  if (emptyState) { emptyState.style.display = ''; chatArea.appendChild(emptyState); }
-  quickActions.classList.add('visible');
+  if (emptyState) { emptyState.style.display = ''; if (chatArea) chatArea.appendChild(emptyState); }
+  if (quickActions) quickActions.classList.remove('hidden');
   closeSidebar();
 }
 
 async function loadHistory() {
+  if (!historyList) return;
   try {
     const res = await fetch(API + '/history');
     const data = await res.json();
     const messages = data.messages || [];
     if (messages.length === 0) {
-      historyList.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:20px;font-size:13px">Aucune conversation</div>';
+      historyList.innerHTML = '<div class="cm-empty">Aucune conversation</div>';
       return;
     }
     const conversations = buildConversations(messages);
     historyList.innerHTML = conversations.map((conv, i) =>
-      '<div class="sidebar-item" data-i="' + i + '"><div class="title">' + escapeHtml(conv.q) + '</div><div class="preview">' + escapeHtml(conv.a) + '</div></div>'
+      '<div class="cm-item" data-i="' + i + '"><div class="cm-q">' + escapeHtml(conv.q) + '</div><div class="cm-a">' + escapeHtml(conv.a) + '</div></div>'
     ).join('');
-    historyList.querySelectorAll('.sidebar-item').forEach(el => {
+    historyList.querySelectorAll('.cm-item').forEach(el => {
       el.addEventListener('click', () => { loadConversation(+el.dataset.i, conversations); closeSidebar(); });
     });
   } catch {
-    historyList.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:20px;font-size:13px">Erreur de chargement</div>';
+    historyList.innerHTML = '<div class="cm-empty">Erreur de chargement</div>';
   }
 }
 
@@ -340,56 +376,59 @@ function buildConversations(messages) {
 
 function loadConversation(i, conversations) {
   const conv = conversations[i]; if (!conv) return;
-  chatArea.innerHTML = '';
-  quickActions.classList.remove('visible');
+  if (chatArea) chatArea.innerHTML = '';
+  if (quickActions) quickActions.classList.add('hidden');
   for (const m of conv.full) addMsg(m.role === 'user' ? 'user' : 'alex', escapeHtml(m.content));
   scrollToBottom();
 }
 
 // Settings
 function openSettings() {
-  settingsPanel.classList.add('visible');
-  $('#cfgUrl').value = API;
+  if (settingsPanel) settingsPanel.classList.remove('hidden');
+  const cfgUrl = $('#cfgUrl');
+  if (cfgUrl) cfgUrl.value = API;
   loadModels();
   loadVoices();
   loadMemory();
 }
-function closeSettings() { settingsPanel.classList.remove('visible'); }
-function saveSettings() {
-  const url = $('#cfgUrl').value.trim();
-  if (url) {
-    API = url;
-    localStorage.setItem(CONFIG.storageKeys.api, url);
-    checkBackendStatus();
-  }
-  showToast('Paramètres sauvegardés');
-  closeSettings();
+
+function closeSettings() {
+  if (settingsPanel) settingsPanel.classList.add('hidden');
 }
+
 function loadSettings() {
-  $('#cfgUrl').value = API;
-  $('#cfgVoiceEnabled').checked = voiceEnabled;
+  const cfgUrl = $('#cfgUrl');
+  if (cfgUrl) cfgUrl.value = API;
+  const cfgVoiceEnabled = $('#cfgVoiceEnabled');
+  if (cfgVoiceEnabled) cfgVoiceEnabled.checked = voiceEnabled;
 }
 
 async function loadModels() {
   try {
     const res = await fetch(API + '/models');
     const data = await res.json();
-    const sel = $('#cfgModelSel'); sel.innerHTML = '';
-    for (const m of (data.models || [])) {
-      const opt = document.createElement('option');
-      opt.value = m; opt.textContent = m;
-      if (m === data.current) opt.selected = true;
-      sel.appendChild(opt);
+    const sel = $('#cfgModelSel');
+    if (sel) {
+      sel.innerHTML = '';
+      for (const m of (data.models || [])) {
+        const opt = document.createElement('option');
+        opt.value = m; opt.textContent = m;
+        if (m === data.current) opt.selected = true;
+        sel.appendChild(opt);
+      }
     }
-    $('#cfgModel').textContent = data.current || '-';
-    sel.addEventListener('change', async () => {
-      await fetch(API + '/model', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: sel.value })
+    const cfgModel = $('#cfgModel');
+    if (cfgModel) cfgModel.textContent = data.current || '-';
+    if (sel) {
+      sel.addEventListener('change', async () => {
+        await fetch(API + '/model', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: sel.value })
+        });
+        if (cfgModel) cfgModel.textContent = sel.value;
       });
-      $('#cfgModel').textContent = sel.value;
-    });
+    }
   } catch {}
 }
 
@@ -397,17 +436,20 @@ async function loadVoices() {
   try {
     const res = await fetch(API + '/voices');
     const data = await res.json();
-    const sel = $('#cfgVoice'); sel.innerHTML = '';
-    for (const v of (data.voices || [])) {
-      const opt = document.createElement('option');
-      opt.value = v.id; opt.textContent = v.name || v.id;
-      if (v.id === currentVoice) opt.selected = true;
-      sel.appendChild(opt);
+    const sel = $('#cfgVoice');
+    if (sel) {
+      sel.innerHTML = '';
+      for (const v of (data.voices || [])) {
+        const opt = document.createElement('option');
+        opt.value = v.id; opt.textContent = v.name || v.id;
+        if (v.id === currentVoice) opt.selected = true;
+        sel.appendChild(opt);
+      }
+      sel.addEventListener('change', () => {
+        currentVoice = sel.value;
+        localStorage.setItem(CONFIG.storageKeys.voice, currentVoice);
+      });
     }
-    sel.addEventListener('change', () => {
-      currentVoice = sel.value;
-      localStorage.setItem(CONFIG.storageKeys.voice, currentVoice);
-    });
   } catch {}
 }
 
@@ -415,7 +457,8 @@ async function loadMemory() {
   try {
     const res = await fetch(API + '/memory');
     const data = await res.json();
-    $('#cfgMem').textContent = (data.level || 1) + ' · ' + (data.facts || 0) + ' faits';
+    const cfgMem = $('#cfgMem');
+    if (cfgMem) cfgMem.textContent = (data.level || 1) + ' · ' + (data.facts || 0) + ' faits';
   } catch {}
 }
 
@@ -479,13 +522,13 @@ async function toggleMic() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       micActive = true;
-      micBtn.classList.add('active');
+      if (micBtn) micBtn.classList.add('active');
       showToast('Micro activé');
-      stream.getTracks().forEach(t => t.addEventListener('ended', () => { micActive = false; micBtn.classList.remove('active'); }));
+      stream.getTracks().forEach(t => t.addEventListener('ended', () => { micActive = false; if (micBtn) micBtn.classList.remove('active'); }));
     } catch { showToast('Accès micro refusé'); }
   } else {
     micActive = false;
-    micBtn.classList.remove('active');
+    if (micBtn) micBtn.classList.remove('active');
   }
 }
 
@@ -499,25 +542,36 @@ function renderMd(t) {
   h = h.replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,0.1);padding:2px 6px;border-radius:4px;font-size:13px">$1</code>');
   h = h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   h = h.replace(/\*(.+?)\*/g, '<em>$1</em>');
-  h = h.replace(/(https?:\/\/[^\s<&]+)/g, '<a href="$1" target="_blank" rel="noopener" style="color:var(--amber)">$1</a>');
+  h = h.replace(/(https?:\/\/[^\s<&]+)/g, '<a href="$1" target="_blank" rel="noopener" style="color:#ffc98c">$1</a>');
   h = h.replace(/\n/g, '<br>');
   return h;
 }
 
 // Media Viewer
 function openMediaViewer(url, type) {
-  mediaViewer.classList.add('visible');
-  const content = $('#mvContent');
-  if (type === 'image') content.innerHTML = '<img src="' + url + '">';
-  else content.innerHTML = '<video src="' + url + '" controls autoplay style="max-width:90%;max-height:90%"></video>';
+  if (mediaViewer) {
+    mediaViewer.style.display = 'flex';
+    const content = $('#mvContent');
+    if (content) {
+      if (type === 'image') content.innerHTML = '<img src="' + url + '">';
+      else content.innerHTML = '<video src="' + url + '" controls autoplay style="max-width:90%;max-height:90%"></video>';
+    }
+  }
 }
-function closeMediaViewer() { mediaViewer.classList.remove('visible'); $('#mvContent').innerHTML = ''; }
+
+function closeMediaViewer() {
+  if (mediaViewer) mediaViewer.style.display = 'none';
+  const content = $('#mvContent');
+  if (content) content.innerHTML = '';
+}
 
 // Toast
 function showToast(msg) {
-  toast.textContent = msg;
-  toast.classList.add('visible');
-  setTimeout(() => toast.classList.remove('visible'), 2500);
+  if (toast) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2500);
+  }
 }
 
 // Service Worker
