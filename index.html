@@ -6898,24 +6898,7 @@ sliderWrap.addEventListener('touchend', e => {
 /* Orb 3D animé via stage3d */
 </script>
 <div id="toast" style="position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(15,18,28,0.95);border:1px solid rgba(255,157,61,0.3);border-radius:12px;padding:10px 20px;font-size:14px;color:#fff6ea;opacity:0;transition:all 0.3s;z-index:9999;pointer-events:none;backdrop-filter:blur(10px)"></div>
-<div id="sidebarOverlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:90;display:none;backdrop-filter:blur(4px)" onclick="closeSidebar()"></div>
-<script>
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  if (t) {
-    t.textContent = msg;
-    t.style.opacity = '1';
-    t.style.transform = 'translateX(-50%) translateY(0)';
-    setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateX(-50%) translateY(20px)'; }, 2500);
-  }
-}
-function closeSidebar() {
-  const menu = document.getElementById('chatMenu');
-  const overlay = document.getElementById('sidebarOverlay');
-  if (menu) menu.classList.remove('open');
-  if (overlay) overlay.style.display = 'none';
-}
-</script>
+<div id="sidebarOverlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:90;display:none;backdrop-filter:blur(4px)"></div>
 <script src="js/app.js"></script>
 </body>
 </html>
