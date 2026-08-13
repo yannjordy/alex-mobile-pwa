@@ -2753,6 +2753,8 @@ function stopServerSTT(){
 let micAutoStarted = false;
 async function autoStartMic(){
   if(micAutoStarted || micActive) return;
+  // Ne pas auto-démarrer le micro en mode PWA (pas de serveur backend)
+  if(typeof require === 'undefined') return;
   micAutoStarted = true;
   await toggleMic();
   // Retry mic if it failed to start
@@ -4847,12 +4849,12 @@ function connectWakeSocket(){
 function onWakeDetected(){
   if(typeof require !== 'undefined'){
     try{ require('electron').ipcRenderer.send('set-mode', 'full'); }catch(e){}
-  }
-  if(!micActive){
-    micBtn.classList.add('active');
-    connectMic().then(()=>{
-      startServerSTT();
-    });
+    if(!micActive){
+      micBtn.classList.add('active');
+      connectMic().then(()=>{
+        startServerSTT();
+      });
+    }
   }
 }
 
