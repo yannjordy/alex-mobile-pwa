@@ -1842,23 +1842,25 @@
         <div id="chatArea" style="flex:1;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:8px"></div>
 
         <div id="inputBar" style="flex-shrink:0;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom)">
-          <div id="filePreview" style="display:none;flex-wrap:wrap;gap:8px;padding:10px 14px;border-top:1px solid rgba(255,157,61,0.1);background:rgba(0,0,0,0.2)"></div>
-          <div id="inputContainer" style="margin:8px 12px;display:flex;align-items:center;gap:8px;padding:12px 14px;border:1px solid rgba(255,157,61,0.25);border-radius:16px;background:rgba(255,157,61,0.05)">
-            <button class="round-btn" id="uploadBtn" title="Joindre un fichier" style="flex-shrink:0;width:36px;height:36px">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.19 9.19a2 2 0 01-2.83-2.83l8.49-8.48" stroke="#ffddbb" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </button>
-            <input id="textInput" type="text" placeholder="Écrire à Alex…" style="flex:1;min-width:0;border:none;background:transparent;color:#ffddbb;font-size:15px;outline:none">
-            <button class="round-btn" id="micActionBtn" title="Micro" style="flex-shrink:0;width:40px;height:40px">
-              <svg id="micSendIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" style="display:none">
-                <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="#ffddbb" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
-              </svg>
-              <svg id="micMicIcon" width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <rect x="9" y="2" width="6" height="12" rx="3" stroke="#ffddbb" stroke-width="1.8"/>
-                <path d="M5 11a7 7 0 0014 0M12 19v3M9 22h6" stroke="#ffddbb" stroke-width="1.8" stroke-linecap="round"/>
-              </svg>
-            </button>
+          <div id="inputContainer" style="margin:8px 12px;display:flex;flex-direction:column;gap:0;padding:10px 12px;border:1px solid rgba(255,157,61,0.25);border-radius:16px;background:rgba(255,157,61,0.05)">
+            <div id="filePreview" style="display:none;flex-wrap:wrap;gap:8px;padding-bottom:10px;border-bottom:1px solid rgba(255,157,61,0.15);margin-bottom:10px"></div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <button class="round-btn" id="uploadBtn" title="Joindre un fichier" style="flex-shrink:0;width:36px;height:36px">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.19 9.19a2 2 0 01-2.83-2.83l8.49-8.48" stroke="#ffddbb" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+              <input id="textInput" type="text" placeholder="Écrire à Alex…" style="flex:1;min-width:0;border:none;background:transparent;color:#ffddbb;font-size:15px;outline:none">
+              <button class="round-btn" id="micActionBtn" title="Micro" style="flex-shrink:0;width:40px;height:40px">
+                <svg id="micSendIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" style="display:none">
+                  <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="#ffddbb" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+                </svg>
+                <svg id="micMicIcon" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <rect x="9" y="2" width="6" height="12" rx="3" stroke="#ffddbb" stroke-width="1.8"/>
+                  <path d="M5 11a7 7 0 0014 0M12 19v3M9 22h6" stroke="#ffddbb" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </div>
