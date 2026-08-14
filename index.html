@@ -6169,6 +6169,8 @@ if(typeof require !== 'undefined'){
     document.getElementById('newChatBtn').addEventListener('click', (e)=>{
       e.stopPropagation();
       chatArea.innerHTML = '';
+      welcomeRemoved = false;
+      showWelcomeMsg();
       resetSession();
     });
 
@@ -6312,6 +6314,8 @@ if(typeof require !== 'undefined'){
     document.getElementById('cmNewChat').addEventListener('click', (e)=>{
       e.stopPropagation();
       chatArea.innerHTML = '';
+      welcomeRemoved = false;
+      showWelcomeMsg();
       closeChatMenu();
     });
     document.addEventListener('click',(e)=>{
