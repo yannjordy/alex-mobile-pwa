@@ -1848,13 +1848,7 @@
 
       <!-- PAGE 1 : CHAT (chatArea + input) -->
       <div class="page page-chat" id="pageChat">
-        <div id="chatArea" style="flex:1;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:8px">
-          <div id="welcomeMsg" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:32px;text-align:center;animation:fadeIn 0.6s ease">
-            <div id="welcomeTime" style="font-size:48px;font-weight:700;color:#ffc98c;letter-spacing:2px"></div>
-            <div id="welcomeText" style="font-size:20px;color:rgba(255,246,234,0.8);font-weight:500"></div>
-            <div id="welcomeSub" style="font-size:14px;color:rgba(255,246,234,0.4);margin-top:4px"></div>
-          </div>
-        </div>
+        <div id="chatArea" style="flex:1;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:8px"></div>
 
         <div id="inputBar" style="flex-shrink:0">
           <button class="round-btn" id="uploadBtn" title="Joindre un fichier">
@@ -4415,7 +4409,7 @@ async function handleAlexReply(userText, chatCid = ''){
   let pastThinking = false;
   let formeProcessed = false;
   try{
-    const res = await fetch('API/chat/opencode', {
+    const res = await fetch(API + '/chat/opencode', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: userText, mode: 'auto', forme: currentForm, cid: chatCid, session_id: currentSessionId }),
@@ -6976,19 +6970,15 @@ sliderWrap.addEventListener('touchend', e => {
 });
 
 /* Message d'accueil basé sur l'heure */
-(function(){
-  const welcomeMsg = document.getElementById('welcomeMsg');
-  const welcomeTime = document.getElementById('welcomeTime');
-  const welcomeText = document.getElementById('welcomeText');
-  const welcomeSub = document.getElementById('welcomeSub');
-  if(!welcomeMsg) return;
-
+let welcomeRemoved = false;
+function showWelcomeMsg(){
+  if(welcomeRemoved) return;
+  const chatArea = document.getElementById('chatArea');
+  if(!chatArea || document.getElementById('welcomeMsg')) return;
   const now = new Date();
   const h = now.getHours();
   const min = String(now.getMinutes()).padStart(2,'0');
   const hr = String(h).padStart(2,'0');
-  welcomeTime.textContent = hr + ':' + min;
-
   let greet, sub;
   if(h >= 5 && h < 8){ greet = 'Bonjour !'; sub = 'Tu es tôt levé, dis-moi comment je peux t\'aider.'; }
   else if(h >= 8 && h < 12){ greet = 'Bonjour !'; sub = 'Comment puis-je t\'aider ce matin ?'; }
@@ -6996,23 +6986,22 @@ sliderWrap.addEventListener('touchend', e => {
   else if(h >= 14 && h < 18){ greet = 'Bon après-midi !'; sub = 'Qu\'est-ce que je peux faire pour toi ?'; }
   else if(h >= 18 && h < 21){ greet = 'Bonsoir !'; sub = 'Comment se passe ta soirée ?'; }
   else { greet = 'Bonne nuit !'; sub = 'Besoin d\'aide avant de te coucher ?'; }
-
-  welcomeText.textContent = greet;
-  welcomeSub.textContent = sub;
-
-  // Masquer quand l'utilisateur tape un message
-  const textInput = document.getElementById('textInput');
-  if(textInput){
-    textInput.addEventListener('input', function handler(){
-      if(welcomeMsg && welcomeMsg.parentNode){
-        welcomeMsg.style.opacity = '0';
-        welcomeMsg.style.transition = 'opacity 0.3s ease';
-        setTimeout(()=>{ if(welcomeMsg.parentNode) welcomeMsg.remove(); }, 300);
-      }
-      textInput.removeEventListener('input', handler);
-    });
+  const div = document.createElement('div');
+  div.id = 'welcomeMsg';
+  div.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:32px;text-align:center;animation:fadeIn 0.6s ease';
+  div.innerHTML = '<div style="font-size:48px;font-weight:700;color:#ffc98c;letter-spacing:2px">'+hr+':'+min+'</div><div style="font-size:20px;color:rgba(255,246,234,0.8);font-weight:500">'+greet+'</div><div style="font-size:14px;color:rgba(255,246,234,0.4);margin-top:4px">'+sub+'</div>';
+  chatArea.appendChild(div);
+}
+function hideWelcomeMsg(){
+  const w = document.getElementById('welcomeMsg');
+  if(w){
+    w.style.opacity = '0';
+    w.style.transition = 'opacity 0.3s ease';
+    setTimeout(()=>{ if(w.parentNode) w.remove(); }, 300);
+    welcomeRemoved = true;
   }
-})();
+}
+setTimeout(showWelcomeMsg, 100);
 
 /* Orb 3D animé via stage3d */
 </script>
@@ -7130,6 +7119,8 @@ sliderWrap.addEventListener('touchend', e => {
   if(cmNewChat) cmNewChat.addEventListener('click', (e)=>{
     e.stopPropagation();
     chatArea.innerHTML = '';
+    welcomeRemoved = false;
+    showWelcomeMsg();
     closeChatMenu();
   });
   if(cmClearAll) cmClearAll.addEventListener('click', (e)=>{
@@ -7140,6 +7131,8 @@ sliderWrap.addEventListener('touchend', e => {
   if(newChatBtn) newChatBtn.addEventListener('click', (e)=>{
     e.stopPropagation();
     chatArea.innerHTML = '';
+    welcomeRemoved = false;
+    showWelcomeMsg();
     cid = crypto.randomUUID();
   });
 
