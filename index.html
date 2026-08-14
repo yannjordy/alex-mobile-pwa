@@ -1684,6 +1684,7 @@
   .orb-center{position:relative;width:200px;height:200px}
   .orb-glow{position:absolute;inset:-30px;border-radius:50%;background:radial-gradient(circle,rgba(255,157,61,0.15) 0%,transparent 70%);animation:orbGlow 4s ease-in-out infinite}
   @keyframes orbGlow{0%,100%{opacity:.5;transform:scale(1)}50%{opacity:1;transform:scale(1.05)}}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
   .orb-center canvas{width:100%;height:100%;border-radius:50%}
   .orb-hint{position:absolute;bottom:80px;left:50%;transform:translateX(-50%);font-size:13px;color:rgba(255,246,234,0.3);white-space:nowrap}
   .slider-dots{display:flex;justify-content:center;gap:8px;padding:6px 0;flex-shrink:0;background:#000;border-top:1px solid rgba(255,157,61,0.1)}
@@ -1847,7 +1848,13 @@
 
       <!-- PAGE 1 : CHAT (chatArea + input) -->
       <div class="page page-chat" id="pageChat">
-        <div id="chatArea" style="flex:1;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:8px"></div>
+        <div id="chatArea" style="flex:1;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:8px">
+          <div id="welcomeMsg" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:32px;text-align:center;animation:fadeIn 0.6s ease">
+            <div id="welcomeTime" style="font-size:48px;font-weight:700;color:#ffc98c;letter-spacing:2px"></div>
+            <div id="welcomeText" style="font-size:20px;color:rgba(255,246,234,0.8);font-weight:500"></div>
+            <div id="welcomeSub" style="font-size:14px;color:rgba(255,246,234,0.4);margin-top:4px"></div>
+          </div>
+        </div>
 
         <div id="inputBar" style="flex-shrink:0">
           <button class="round-btn" id="micBtn" title="Micro">
@@ -4686,6 +4693,8 @@ checkNetwork();
 sendBtn.addEventListener('click', ()=>{
   const text = textInput.value;
   if(!text.trim()) return;
+  const w = document.getElementById('welcomeMsg');
+  if(w) w.remove();
   sendMessage(text, 'user');
   textInput.value = '';
   handleAlexReply(text);
@@ -6883,6 +6892,45 @@ sliderWrap.addEventListener('touchend', e => {
     sliderPages.style.transform = 'translateX(' + (currentSliderPage * -50) + '%)';
   }
 });
+
+/* Message d'accueil basé sur l'heure */
+(function(){
+  const welcomeMsg = document.getElementById('welcomeMsg');
+  const welcomeTime = document.getElementById('welcomeTime');
+  const welcomeText = document.getElementById('welcomeText');
+  const welcomeSub = document.getElementById('welcomeSub');
+  if(!welcomeMsg) return;
+
+  const now = new Date();
+  const h = now.getHours();
+  const min = String(now.getMinutes()).padStart(2,'0');
+  const hr = String(h).padStart(2,'0');
+  welcomeTime.textContent = hr + ':' + min;
+
+  let greet, sub;
+  if(h >= 5 && h < 8){ greet = 'Bonjour !'; sub = 'Tu es tôt levé, dis-moi comment je peux t\'aider.'; }
+  else if(h >= 8 && h < 12){ greet = 'Bonjour !'; sub = 'Comment puis-je t\'aider ce matin ?'; }
+  else if(h >= 12 && h < 14){ greet = 'Bon midi !'; sub = 'Une pause déjeuner ? Je peux t\'aider avec quelque chose.'; }
+  else if(h >= 14 && h < 18){ greet = 'Bon après-midi !'; sub = 'Qu\'est-ce que je peux faire pour toi ?'; }
+  else if(h >= 18 && h < 21){ greet = 'Bonsoir !'; sub = 'Comment se passe ta soirée ?'; }
+  else { greet = 'Bonne nuit !'; sub = 'Besoin d\'aide avant de te coucher ?'; }
+
+  welcomeText.textContent = greet;
+  welcomeSub.textContent = sub;
+
+  // Masquer quand l'utilisateur tape un message
+  const textInput = document.getElementById('textInput');
+  if(textInput){
+    textInput.addEventListener('input', function handler(){
+      if(welcomeMsg && welcomeMsg.parentNode){
+        welcomeMsg.style.opacity = '0';
+        welcomeMsg.style.transition = 'opacity 0.3s ease';
+        setTimeout(()=>{ if(welcomeMsg.parentNode) welcomeMsg.remove(); }, 300);
+      }
+      textInput.removeEventListener('input', handler);
+    });
+  }
+})();
 
 /* Orb 3D animé via stage3d */
 </script>
