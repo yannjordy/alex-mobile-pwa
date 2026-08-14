@@ -94,28 +94,6 @@ function setupEventListeners() {
   const btnClearHist = $('#btnClearHist') || $('#cmClearAll');
   if (btnClearHist) btnClearHist.addEventListener('click', clearHistory);
 
-  // Install button
-  let deferredPrompt;
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    const installBtn = $('#installBtn');
-    if (installBtn) installBtn.classList.remove('hidden');
-  });
-  
-  const installBtn = $('#installBtn');
-  if (installBtn) {
-    installBtn.addEventListener('click', async () => {
-      if (deferredPrompt) {
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        if (outcome === 'accepted') showToast('Alex installé !');
-        deferredPrompt = null;
-        installBtn.classList.add('hidden');
-      }
-    });
-  }
-
   const mvClose = $('#mvClose');
   if (mvClose) mvClose.addEventListener('click', closeMediaViewer);
   if (mediaViewer) {
