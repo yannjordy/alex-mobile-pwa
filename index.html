@@ -2318,7 +2318,8 @@ if(typeof require === 'undefined'){
 }
 /* ── API URL configurable ── */
 const API = localStorage.getItem('alex_api') || location.origin;
-import * as THREE from 'three';
+let THREE;
+try { THREE = await import('three'); } catch(e){ console.warn('THREE.js unavailable:', e.message); }
 
 /* =====================================================================
    ORB — reprend le moteur construit dans oda-orb-desktop (sphère en
@@ -2333,7 +2334,7 @@ let W,H;
 function getSize(){ W=container.clientWidth||100; H=container.clientHeight||100; }
 getSize();
 
-const scene = new THREE.Scene();
+if(THREE){
 const viewHalf = R*1.3;
 const camera = new THREE.OrthographicCamera(-viewHalf,viewHalf,viewHalf,-viewHalf,0.1,2000);
 camera.position.set(0,0,500); camera.lookAt(0,0,0);
@@ -2970,6 +2971,8 @@ function animate(ts){
   renderer.render(scene, camera);
 }
 requestAnimationFrame(animate);
+
+} // end if(THREE)
 
 /* --- Logos intégrations --- */
 const _logoCache = {};
