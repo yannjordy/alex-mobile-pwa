@@ -3098,30 +3098,25 @@ function updateFilePreview(){
     const isAudio = ['mp3','wav','ogg','flac','aac','m4a'].includes(ext);
     const isVideo = ['mp4','webm','mov','avi'].includes(ext);
     const widget = document.createElement('div');
-    widget.style.cssText = 'position:relative;display:inline-flex;align-items:center;gap:6px;padding:6px 10px;background:rgba(255,157,61,0.1);border:1px solid rgba(255,157,61,0.2);border-radius:10px;font-size:12px;color:#ffddbb;max-width:180px';
-    let icon = '';
+    widget.style.cssText = 'position:relative;display:inline-flex;align-items:center;gap:6px;padding:6px 10px;background:rgba(255,157,61,0.1);border:1px solid rgba(255,157,61,0.2);border-radius:12px;font-size:12px;color:#ffddbb;overflow:hidden';
     if(isImg){
       const url = URL.createObjectURL(file);
-      widget.innerHTML = '<img src="'+url+'" style="width:32px;height:32px;border-radius:6px;object-fit:cover"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">'+file.name+'</span>';
+      widget.style.cssText = 'position:relative;display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;padding:0;border-radius:12px;border:1px solid rgba(255,157,61,0.25);background:rgba(255,157,61,0.08);overflow:hidden';
+      widget.innerHTML = '<img src="'+url+'" style="width:100%;height:100%;object-fit:cover;border-radius:10px">';
     } else if(isPdf){
-      icon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="#ef4444" stroke-width="1.8"/><path d="M14 2v6h6" stroke="#ef4444" stroke-width="1.8"/></svg>';
-      widget.innerHTML = icon + '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">'+file.name+'</span>';
+      widget.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="#ef4444" stroke-width="1.8"/><path d="M14 2v6h6" stroke="#ef4444" stroke-width="1.8"/></svg><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100px">'+file.name+'</span>';
     } else if(isDoc){
-      icon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="#4A90D9" stroke-width="1.8"/><path d="M14 2v6h6" stroke="#4A90D9" stroke-width="1.8"/></svg>';
-      widget.innerHTML = icon + '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">'+file.name+'</span>';
+      widget.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="#4A90D9" stroke-width="1.8"/><path d="M14 2v6h6" stroke="#4A90D9" stroke-width="1.8"/></svg><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100px">'+file.name+'</span>';
     } else if(isAudio){
-      icon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M9 18V5l12-2v13" stroke="#1DB954" stroke-width="1.8"/><circle cx="6" cy="18" r="3" stroke="#1DB954" stroke-width="1.8"/><circle cx="18" cy="16" r="3" stroke="#1DB954" stroke-width="1.8"/></svg>';
-      widget.innerHTML = icon + '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">'+file.name+'</span>';
+      widget.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M9 18V5l12-2v13" stroke="#1DB954" stroke-width="1.8"/><circle cx="6" cy="18" r="3" stroke="#1DB954" stroke-width="1.8"/><circle cx="18" cy="16" r="3" stroke="#1DB954" stroke-width="1.8"/></svg><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100px">'+file.name+'</span>';
     } else if(isVideo){
-      icon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="2.18" stroke="#FF0000" stroke-width="1.8"/><path d="M10 9l5 3-5 3V9z" fill="#FF0000"/></svg>';
-      widget.innerHTML = icon + '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">'+file.name+'</span>';
+      widget.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="2.18" stroke="#FF0000" stroke-width="1.8"/><path d="M10 9l5 3-5 3V9z" fill="#FF0000"/></svg><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100px">'+file.name+'</span>';
     } else {
-      icon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9l-7-7z" stroke="#ffc98c" stroke-width="1.8"/><path d="M13 2v7h7" stroke="#ffc98c" stroke-width="1.8"/></svg>';
-      widget.innerHTML = icon + '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">'+file.name+'</span>';
+      widget.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9l-7-7z" stroke="#ffc98c" stroke-width="1.8"/><path d="M13 2v7h7" stroke="#ffc98c" stroke-width="1.8"/></svg><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100px">'+file.name+'</span>';
     }
     const removeBtn = document.createElement('button');
     removeBtn.innerHTML = '✕';
-    removeBtn.style.cssText = 'background:rgba(239,68,68,0.3);border:none;color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center';
+    removeBtn.style.cssText = 'position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.7);border:1px solid rgba(255,255,255,0.2);color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:1';
     removeBtn.onclick = ()=>{ pendingFiles.splice(idx,1); updateFilePreview(); };
     widget.appendChild(removeBtn);
     filePreview.appendChild(widget);
