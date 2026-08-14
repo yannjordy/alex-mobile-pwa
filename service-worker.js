@@ -1,4 +1,4 @@
-const CACHE_NAME = 'alex-pwa-v2';
+const CACHE_NAME = 'alex-pwa-v3';
 const BASE = self.location.pathname.replace(/\/[^/]*$/, '/');
 const STATIC_ASSETS = [
   BASE,

@@ -102,6 +102,15 @@ function setupEventListeners() {
     });
   }
 
+  const mediaModalClose = $('#mediaModalClose');
+  if (mediaModalClose) mediaModalClose.addEventListener('click', closeMediaModal);
+  const mediaModal = $('#mediaModal');
+  if (mediaModal) {
+    mediaModal.addEventListener('click', (e) => {
+      if (e.target === mediaModal) closeMediaModal();
+    });
+  }
+
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       if (mediaViewer && mediaViewer.style.display !== 'none') closeMediaViewer();
@@ -217,12 +226,13 @@ async function handleAlexReply(text) {
             continue;
           }
           if (p.type === 'status') { showStatus(p.text || ''); continue; }
-          if (p.type === 'tool' || p.type === 'cmd') {
+          if (p.type === 'tool' || p.type === 'cmd' || p.type === 'tool_reply') {
             if (!bubble) { bubble = addMsg('alex', ''); bubble.querySelector('.bubble').innerHTML = ''; }
             const chip = document.createElement('div');
             chip.className = 'tool-chip';
             chip.style.cssText = 'margin:8px 0;padding:8px 12px;background:rgba(255,157,61,0.05);border:1px solid rgba(255,157,61,0.15);border-radius:8px;font-size:12px';
-            chip.innerHTML = '<div style="color:#ffc98c;margin-bottom:4px">' + (p.type === 'tool' ? '🔧' : '▶') + ' ' + escapeHtml(p.tool || p.command || '') + '</div><div style="color:rgba(255,246,234,0.6);white-space:pre-wrap;max-height:100px;overflow:auto">' + escapeHtml((p.result || p.output || '').slice(0, 500)) + '</div>';
+            const replyText = p.reply || p.result || p.output || '';
+            chip.innerHTML = '<div style="color:#ffc98c;margin-bottom:4px">' + (p.type === 'tool' || p.type === 'tool_reply' ? '🔧' : '▶') + ' ' + escapeHtml(p.tool || p.command || '') + '</div><div style="color:rgba(255,246,234,0.6);white-space:pre-wrap;max-height:200px;overflow:auto">' + renderMediaContent(replyText) + '</div>';
             bubble.appendChild(chip);
             scrollToBottom();
             continue;
@@ -510,18 +520,67 @@ async function toggleMic() {
   }
 }
 
-// Markdown
+// Markdown + Media rendering
 function escapeHtml(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+function renderMediaContent(text) {
+  if (!text) return '';
+  const URL_RE = /https?:\/\/[^\s<>]+/gi;
+  const IMG_RE = /\.(jpe?g|png|gif|webp|bmp|svg|avif)(\?[^\s]*)?$/i;
+  const VID_RE = /\.(mp4|webm|ogg|mov)(\?[^\s]*)?$/i;
+  const AUD_RE = /\.(mp3|wav|ogg|flac|aac|m4a)(\?[^\s]*)?$/i;
+  const embeds = [];
+
+  const textWithMarkers = text.replace(URL_RE, (m) => {
+    const idx = embeds.length;
+    const lower = m.toLowerCase();
+    if (IMG_RE.test(lower)) {
+      embeds.push('<div style="margin:6px 0;cursor:pointer" onclick="openMediaViewer(\'' + escapeHtml(m) + '\',\'image\')"><img src="' + escapeHtml(m) + '" loading="lazy" style="max-width:100%;max-height:300px;border-radius:8px" onerror="this.style.display=\'none\'"></div>');
+      try { addMedia('image', m); } catch(e) {}
+    } else if (VID_RE.test(lower)) {
+      embeds.push('<div style="margin:6px 0"><video src="' + escapeHtml(m) + '" controls loading="lazy" style="max-width:100%;max-height:300px;border-radius:8px"></video></div>');
+      try { addMedia('video', m); } catch(e) {}
+    } else if (AUD_RE.test(lower)) {
+      embeds.push('<div style="margin:6px 0"><audio src="' + escapeHtml(m) + '" controls style="width:100%"></audio></div>');
+      try { addMedia('audio', m); } catch(e) {}
+    } else if (/youtube\.com\/watch\?v=|youtu\.be\//.test(lower)) {
+      const idMatch = m.match(/[?&]v=([\w-]{11})|youtu\.be\/([\w-]{11})/);
+      const ytId = idMatch ? (idMatch[1] || idMatch[2]) : null;
+      if (ytId) {
+        const embedUrl = 'https://www.youtube.com/embed/' + ytId + '?rel=0&modestbranding=1';
+        embeds.push('<div style="margin:6px 0"><iframe src="' + embedUrl + '" frameborder="0" loading="lazy" allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture" allowfullscreen style="width:100%;aspect-ratio:16/9;border-radius:8px"></iframe></div>');
+        try { addMedia('video', embedUrl, 'YouTube'); } catch(e) {}
+      } else {
+        embeds.push('<a href="' + escapeHtml(m) + '" target="_blank" rel="noopener" style="color:#ffc98c;font-size:13px">▶ Ouvrir sur YouTube</a>');
+      }
+    } else if (/dailymotion\.com\/video\//.test(lower)) {
+      const idMatch = m.match(/dailymotion\.com\/video\/([a-zA-Z0-9]+)/);
+      if (idMatch) {
+        const embedUrl = 'https://www.dailymotion.com/embed/video/' + idMatch[1];
+        embeds.push('<div style="margin:6px 0"><iframe src="' + embedUrl + '" frameborder="0" loading="lazy" allow="autoplay;fullscreen;picture-in-picture" allowfullscreen style="width:100%;aspect-ratio:16/9;border-radius:8px"></iframe></div>');
+        try { addMedia('video', embedUrl, 'Dailymotion'); } catch(e) {}
+      }
+    } else {
+      embeds.push('<a href="' + escapeHtml(m) + '" target="_blank" rel="noopener" style="color:#ffc98c;font-size:13px">🌐 Ouvrir</a>');
+    }
+    return '\x00EMBED' + idx + '\x00';
+  });
+
+  let html = escapeHtml(textWithMarkers);
+  embeds.forEach((e, i) => { html = html.replace('\x00EMBED' + i + '\x00', e); });
+  html = html.replace(/\n/g, '<br>');
+  return html;
+}
 
 function renderMd(t) {
   if (!t) return '';
-  let h = escapeHtml(t);
+  // Render media URLs first (images, videos, audio)
+  let h = renderMediaContent(t);
+  // Then apply markdown
   h = h.replace(/```(\w*)\n([\s\S]*?)```/g, (_, l, c) => '<pre style="background:rgba(0,0,0,0.3);padding:12px;border-radius:8px;overflow-x:auto;font-size:13px;margin:8px 0"><code>' + c + '</code></pre>');
   h = h.replace(/`([^`]+)`/g, '<code style="background:rgba(255,255,255,0.1);padding:2px 6px;border-radius:4px;font-size:13px">$1</code>');
   h = h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   h = h.replace(/\*(.+?)\*/g, '<em>$1</em>');
-  h = h.replace(/(https?:\/\/[^\s<&]+)/g, '<a href="$1" target="_blank" rel="noopener" style="color:#ffc98c">$1</a>');
-  h = h.replace(/\n/g, '<br>');
   return h;
 }
 
@@ -541,6 +600,76 @@ function closeMediaViewer() {
   if (mediaViewer) mediaViewer.style.display = 'none';
   const content = $('#mvContent');
   if (content) content.innerHTML = '';
+}
+
+// Media Modal data
+const mediaData = { videos: [], images: [], pdfs: [], audio: [] };
+const mediaIndex = { videos: 0, images: 0, pdfs: 0, audio: 0 };
+
+function addMedia(type, url, title = '') {
+  const tab = type === 'video' ? 'videos' : type === 'image' ? 'images' : type === 'pdf' ? 'pdfs' : 'audio';
+  if (!mediaData[tab].find(m => m.url === url)) {
+    mediaData[tab].push({ url, title });
+    mediaIndex[tab] = mediaData[tab].length - 1;
+  }
+  openMediaModal(tab);
+}
+
+function openMediaModal(tab = 'images') {
+  const modal = $('#mediaModal');
+  if (modal) {
+    modal.style.display = 'flex';
+    modal.classList.add('open');
+    renderMediaSlider(tab);
+  }
+}
+
+function closeMediaModal() {
+  const modal = $('#mediaModal');
+  if (modal) {
+    modal.classList.remove('open');
+    modal.style.display = 'none';
+  }
+}
+
+function renderMediaSlider(tab) {
+  const slider = $('#' + tab.replace('s', '') + 'Slider') || $('#videoSlider');
+  const counter = $('#' + tab.replace('s', '') + 'Counter') || $('#videoCounter');
+  const items = mediaData[tab] || [];
+  const idx = mediaIndex[tab] || 0;
+
+  if (!slider) return;
+  if (items.length === 0) {
+    slider.innerHTML = '<div style="text-align:center;padding:40px;color:rgba(255,246,234,0.4)">Aucun ' + tab + '</div>';
+    if (counter) counter.textContent = '0 / 0';
+    return;
+  }
+
+  slider.innerHTML = items.map((item, i) => {
+    let content = '';
+    if (tab === 'images') {
+      content = '<img src="' + escapeHtml(item.url) + '" loading="lazy" style="max-width:100%;max-height:60vh;object-fit:contain;border-radius:8px;cursor:pointer" onclick="openMediaViewer(\'' + escapeHtml(item.url) + '\',\'image\')" onerror="this.style.display=\'none\'">';
+    } else if (tab === 'videos') {
+      if (item.url.includes('youtube.com/embed') || item.url.includes('dailymotion.com/embed')) {
+        content = '<iframe src="' + escapeHtml(item.url) + '" frameborder="0" allowfullscreen style="width:100%;aspect-ratio:16/9;border-radius:8px"></iframe>';
+      } else {
+        content = '<video src="' + escapeHtml(item.url) + '" controls style="max-width:100%;max-height:60vh;border-radius:8px"></video>';
+      }
+    } else if (tab === 'audio') {
+      content = '<div style="text-align:center;padding:20px"><div style="font-size:48px;margin-bottom:12px">🎵</div><audio src="' + escapeHtml(item.url) + '" controls style="width:100%"></audio></div>';
+    } else if (tab === 'pdfs') {
+      content = '<iframe src="' + escapeHtml(item.url) + '" style="width:100%;height:60vh;border:none;border-radius:8px"></iframe>';
+    }
+    return '<div class="media-slide' + (i === idx ? ' active' : '') + '" data-index="' + i + '">' + content + '</div>';
+  }).join('');
+
+  if (counter) counter.textContent = (idx + 1) + ' / ' + items.length;
+
+  // Nav buttons
+  const prev = slider.parentElement?.querySelector('.media-prev');
+  const next = slider.parentElement?.querySelector('.media-next');
+  if (prev) prev.onclick = () => { mediaIndex[tab] = Math.max(0, idx - 1); renderMediaSlider(tab); };
+  if (next) next.onclick = () => { mediaIndex[tab] = Math.min(items.length - 1, idx + 1); renderMediaSlider(tab); };
 }
 
 // Toast
