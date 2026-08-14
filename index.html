@@ -1857,21 +1857,19 @@
         </div>
 
         <div id="inputBar" style="flex-shrink:0">
-          <button class="round-btn" id="micBtn" title="Micro">
+          <button class="round-btn" id="uploadBtn" title="Joindre un fichier">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" stroke="#ffddbb" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <input id="textInput" type="text" placeholder="Écrire à Alex…">
+          <button class="round-btn" id="sendBtn" title="Envoyer vocal">
+            <svg id="sendIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" style="display:none">
+              <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="#ffddbb" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+            </svg>
+            <svg id="micIcon" width="18" height="18" viewBox="0 0 24 24" fill="none">
               <rect x="9" y="2" width="6" height="12" rx="3" stroke="#ffddbb" stroke-width="1.8"/>
               <path d="M5 11a7 7 0 0014 0M12 19v3M9 22h6" stroke="#ffddbb" stroke-width="1.8" stroke-linecap="round"/>
-            </svg>
-          </button>
-          <button class="stop-btn" id="stopBtn" title="Interrompre Alex">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <rect x="6" y="6" width="12" height="12" rx="2" stroke="currentColor" stroke-width="2"/>
-            </svg>
-          </button>
-          <input id="textInput" type="text" placeholder="Écrire à Alex...">
-          <button class="round-btn" id="sendBtn" title="Envoyer">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="#ffddbb" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
             </svg>
           </button>
         </div>
@@ -1923,7 +1921,7 @@
   <div id="settingsPanel" style="display:none;">
     <div style="position:absolute;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(10px)" onclick="document.getElementById('settingsPanel').style.display='none'"></div>
     <div style="position:relative;width:min(420px,90vw);margin:auto;background:#1a1d27;border:1px solid rgba(255,157,61,0.2);border-radius:20px;padding:24px;max-height:80vh;overflow-y:auto;z-index:1">
-      <h2 style="margin:0 0 20px;font-size:18px;color:#ffc98c">⚙️ Paramètres</h2>
+      <h2 style="margin:0 0 20px;font-size:18px;color:#ffc98c"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="vertical-align:middle;margin-right:6px"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" stroke-width="1.8"/></svg> Paramètres</h2>
       <div style="margin-bottom:16px">
         <label style="display:block;font-size:13px;color:rgba(255,246,234,0.6);margin-bottom:6px">URL du serveur</label>
         <input id="cfgUrl" type="url" placeholder="http://192.168.1.10:8765" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,157,61,0.2);background:rgba(255,255,255,0.05);color:#fff6ea;font-size:14px;outline:none">
@@ -3019,12 +3017,85 @@ function _logoHtml(app, size=16){
 
 /* =====================================================================
    CHAT — logique de la coquille (le vrai "cerveau" arrive à l'étape 2)
-   ===================================================================== */
+    ===================================================================== */
 let currentAbort = null;
 const chatArea = document.getElementById('chatArea');
 const textInput = document.getElementById('textInput');
 const sendBtn = document.getElementById('sendBtn');
-const micBtn = document.getElementById('micBtn');
+const uploadBtn = document.getElementById('uploadBtn');
+const sendIcon = document.getElementById('sendIcon');
+const micIcon = document.getElementById('micIcon');
+
+// Toggle send/mic icon based on input
+function updateSendIcon(){
+  if(textInput.value.trim()){
+    sendIcon.style.display = '';
+    micIcon.style.display = 'none';
+  } else {
+    sendIcon.style.display = 'none';
+    micIcon.style.display = '';
+  }
+}
+textInput.addEventListener('input', updateSendIcon);
+updateSendIcon();
+
+// Upload menu
+let uploadMenuEl = null;
+function showUploadMenu(){
+  if(uploadMenuEl){ uploadMenuEl.remove(); uploadMenuEl = null; return; }
+  uploadMenuEl = document.createElement('div');
+  uploadMenuEl.id = 'uploadMenu';
+  uploadMenuEl.style.cssText = 'position:absolute;bottom:60px;left:10px;background:#1a1d27;border:1px solid rgba(255,157,61,0.2);border-radius:14px;padding:6px 0;z-index:100;min-width:180px;box-shadow:0 8px 32px rgba(0,0,0,0.5);animation:dropdownIn .2s ease';
+  const items = [
+    {icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.8"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/><path d="M21 15l-5-5L5 21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>', label:'Image', action:()=>openFilePicker('image/*')},
+    {icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9l-7-7z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M13 2v7h7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>', label:'Fichier', action:()=>openFilePicker('*/*')},
+    {icon:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2v11z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="13" r="4" stroke="currentColor" stroke-width="1.8"/></svg>', label:'Caméra', action:()=>openCamera()}
+  ];
+  items.forEach(it=>{
+    const btn = document.createElement('button');
+    btn.style.cssText = 'display:flex;align-items:center;gap:10px;width:100%;padding:10px 16px;border:none;background:none;color:#ffddbb;font-size:14px;cursor:pointer;text-align:left';
+    btn.innerHTML = '<span>'+it.icon+'</span><span>'+it.label+'</span>';
+    btn.onmouseenter = ()=> btn.style.background = 'rgba(255,157,61,0.1)';
+    btn.onmouseleave = ()=> btn.style.background = 'none';
+    btn.onclick = ()=>{ it.action(); uploadMenuEl.remove(); uploadMenuEl = null; };
+    uploadMenuEl.appendChild(btn);
+  });
+  document.body.appendChild(uploadMenuEl);
+  setTimeout(()=> document.addEventListener('click', closeUploadMenu, {once:true}), 0);
+}
+function closeUploadMenu(){ if(uploadMenuEl){ uploadMenuEl.remove(); uploadMenuEl = null; } }
+uploadBtn.addEventListener('click', (e)=>{ e.stopPropagation(); showUploadMenu(); });
+
+function openFilePicker(accept){
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = accept;
+  inp.multiple = true;
+  inp.onchange = ()=> handleFiles(inp.files);
+  inp.click();
+}
+function openCamera(){
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = 'image/*';
+  inp.capture = 'environment';
+  inp.onchange = ()=> handleFiles(inp.files);
+  inp.click();
+}
+function handleFiles(files){
+  if(!files || !files.length) return;
+  for(const f of files) sendFileAttachment(f);
+}
+function sendFileAttachment(file){
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    const ext = file.name.split('.').pop().toLowerCase();
+    const isImage = ['jpg','jpeg','png','gif','webp','svg','bmp'].includes(ext);
+    const content = isImage ? '![image](data:'+file.type+';base64,'+btoa(String.fromCharCode(...new Uint8Array(reader.result)))+')' : 'Fichier: '+file.name;
+    sendMessage(content, 'user');
+  };
+  reader.readAsArrayBuffer(file);
+}
 
 // Session conversationnelle : mémorisée par "nouvelle conversation"
 function newSessionId(){
@@ -3956,7 +4027,7 @@ function addChatCodeEvent(path, code, lang){
 function codeBlockChip(code, lang, fullText){
   const path = inferCodePath(fullText, lang);
   addChatCodeEvent(path, code, lang);
-  return `<span class="code-chip" onclick="openCodeModal()" title="Voir ${escapeHtml(path)} dans l'éditeur">📄 <b>${escapeHtml(path)}</b> <span class="code-chip-open">· voir l'éditeur</span></span>`;
+  return `<span class="code-chip" onclick="openCodeModal()" title="Voir ${escapeHtml(path)} dans l'éditeur"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="vertical-align:middle"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" stroke-width="1.8"/><path d="M14 2v6h6" stroke="currentColor" stroke-width="1.8"/></svg> <b>${escapeHtml(path)}</b> <span class="code-chip-open">· voir l'éditeur</span></span>`;
 }
 
 /* Rend la réponse d'Alex en séparant sa pensée (bloc [PENSEE]...[/PENSEE], affichée
@@ -4691,14 +4762,20 @@ setInterval(checkNetwork, 15000);
 checkNetwork();
 
 sendBtn.addEventListener('click', ()=>{
-  const text = textInput.value;
-  if(!text.trim()) return;
-  const w = document.getElementById('welcomeMsg');
-  if(w) w.remove();
-  sendMessage(text, 'user');
-  textInput.value = '';
-  handleAlexReply(text);
-  scheduleAutoCollapse();
+  const text = textInput.value.trim();
+  if(text){
+    // Envoyer le message texte
+    const w = document.getElementById('welcomeMsg');
+    if(w) w.remove();
+    sendMessage(text, 'user');
+    textInput.value = '';
+    updateSendIcon();
+    handleAlexReply(text);
+    scheduleAutoCollapse();
+  } else {
+    // Basculer le micro
+    toggleMic();
+  }
 });
 textInput.addEventListener('keydown', (e)=>{
   if(e.key === 'Enter'){ sendBtn.click(); scheduleAutoCollapse(); }
@@ -4707,7 +4784,7 @@ textInput.addEventListener('keydown', (e)=>{
 function toggleMic(){
   if(!micActive){
     listenAlways = document.getElementById('settingListen').checked;
-    micBtn.classList.add('active');
+    sendBtn.classList.add('active');
     document.getElementById('islandMic').classList.remove('muted');
     appEl.classList.add('mic-active');
     setOrbState('listening');
@@ -4716,7 +4793,7 @@ function toggleMic(){
         startServerSTT();
       } else {
         console.warn('[MIC] Connexion micro échouée');
-        micBtn.classList.remove('active');
+        sendBtn.classList.remove('active');
         appEl.classList.remove('mic-active');
         setOrbState('idle');
         // Retry once more
@@ -4734,14 +4811,13 @@ function toggleMic(){
       micSource.mediaStream.getTracks().forEach(t=> t.stop());
     }
     micActive = false;
-    micBtn.classList.remove('active');
+    sendBtn.classList.remove('active');
     document.getElementById('islandMic').classList.add('muted');
     appEl.classList.remove('mic-active');
     setOrbState('idle');
   }
 }
 
-micBtn.addEventListener('click', toggleMic);
 document.getElementById('islandMic').addEventListener('click', (e)=>{
   e.stopPropagation();
   toggleMic();
@@ -4859,7 +4935,7 @@ function onWakeDetected(){
   if(typeof require !== 'undefined'){
     try{ require('electron').ipcRenderer.send('set-mode', 'full'); }catch(e){}
     if(!micActive){
-      micBtn.classList.add('active');
+      sendBtn.classList.add('active');
       connectMic().then(()=>{
         startServerSTT();
       });
@@ -5990,7 +6066,13 @@ function renderMediaSlider(tab) {
   const idx = mediaIndex[tab];
 
   if (items.length === 0) {
-    slider.innerHTML = `<div class="media-empty"><div class="media-empty-icon">${tab === 'videos' ? '🎬' : tab === 'images' ? '🖼️' : tab === 'pdfs' ? '📄' : '🎵'}</div><div class="media-empty-text">Aucun ${tab} pour l'instant</div></div>`;
+    const icons = {
+      videos: '<svg width="48" height="48" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="2.18" stroke="currentColor" stroke-width="1.8"/><path d="M10 9l5 3-5 3V9z" fill="currentColor"/></svg>',
+      images: '<svg width="48" height="48" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.8"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/><path d="M21 15l-5-5L5 21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      pdfs: '<svg width="48" height="48" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" stroke-width="1.8"/><path d="M14 2v6h6" stroke="currentColor" stroke-width="1.8"/></svg>',
+      audio: '<svg width="48" height="48" viewBox="0 0 24 24" fill="none"><path d="M9 18V5l12-2v13" stroke="currentColor" stroke-width="1.8"/><circle cx="6" cy="18" r="3" stroke="currentColor" stroke-width="1.8"/><circle cx="18" cy="16" r="3" stroke="currentColor" stroke-width="1.8"/></svg>'
+    };
+    slider.innerHTML = `<div class="media-empty"><div class="media-empty-icon">${icons[tab] || icons.images}</div><div class="media-empty-text">Aucun ${tab} pour l'instant</div></div>`;
     counter.textContent = '0 / 0';
     return;
   }
@@ -6006,7 +6088,7 @@ function renderMediaSlider(tab) {
     } else if (tab === 'pdfs') {
       content = `<iframe src="${escapeHtml(item.url)}" style="width:100%;height:100%;border:none;border-radius:12px;"></iframe>`;
     } else if (tab === 'audio') {
-      content = `<div style="text-align:center;"><div style="font-size:64px;margin-bottom:16px;">🎵</div><audio src="${escapeHtml(item.url)}" controls style="width:80%;max-width:400px;"></audio><div style="margin-top:12px;color:rgba(255,246,234,0.6);font-size:13px;">${escapeHtml(item.title || 'Audio')}</div></div>`;
+      content = `<div style="text-align:center;"><div style="margin-bottom:16px;"><svg width="64" height="64" viewBox="0 0 24 24" fill="none"><path d="M9 18V5l12-2v13" stroke="#ffddbb" stroke-width="1.8"/><circle cx="6" cy="18" r="3" stroke="#ffddbb" stroke-width="1.8"/><circle cx="18" cy="16" r="3" stroke="#ffddbb" stroke-width="1.8"/></svg></div><audio src="${escapeHtml(item.url)}" controls style="width:80%;max-width:400px;"></audio><div style="margin-top:12px;color:rgba(255,246,234,0.6);font-size:13px;">${escapeHtml(item.title || 'Audio')}</div></div>`;
     }
     return `<div class="media-slide${i === idx ? ' active' : ''}" data-index="${i}">${content}${actions}</div>`;
   }).join('');
@@ -7106,22 +7188,22 @@ sliderWrap.addEventListener('touchend', e => {
   if(codeBtn) codeBtn.addEventListener('click', (e)=>{
     e.stopPropagation();
     toolsDropdown.classList.remove('open');
-    showToolModal('Éditeur de code', '💻', '<p>Cette fonctionnalité est disponible lorsque le serveur Alex est connecté.</p><p style="margin-top:12px;color:rgba(255,246,234,0.5)">L\'éditeur vous permet de voir et modifier les fichiers en temps réel.</p>');
+    showToolModal('Éditeur de code', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><polyline points="16,18 22,12 16,6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><polyline points="8,6 2,12 8,18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>', '<p>Cette fonctionnalité est disponible lorsque le serveur Alex est connecté.</p><p style="margin-top:12px;color:rgba(255,246,234,0.5)">L\'éditeur vous permet de voir et modifier les fichiers en temps réel.</p>');
   });
   if(mapBtn) mapBtn.addEventListener('click', (e)=>{
     e.stopPropagation();
     toolsDropdown.classList.remove('open');
-    showToolModal('Carte du monde', '🗺️', '<p>Cette fonctionnalité est disponible lorsque le serveur Alex est connecté.</p><p style="margin-top:12px;color:rgba(255,246,234,0.5)">La carte interactive affiche votre position et les points d\'intérêt.</p>');
+    showToolModal('Carte du monde', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 2v16M16 6v16" stroke="currentColor" stroke-width="1.8"/></svg>', '<p>Cette fonctionnalité est disponible lorsque le serveur Alex est connecté.</p><p style="margin-top:12px;color:rgba(255,246,234,0.5)">La carte interactive affiche votre position et les points d\'intérêt.</p>');
   });
   if(termBtn) termBtn.addEventListener('click', (e)=>{
     e.stopPropagation();
     toolsDropdown.classList.remove('open');
-    showToolModal('Terminal d\'activité', '🖥️', '<p>Cette fonctionnalité est disponible lorsque le serveur Alex est connecté.</p><p style="margin-top:12px;color:rgba(255,246,234,0.5)">Le terminal affiche l\'activité en temps réel d\'Alex.</p>');
+    showToolModal('Terminal d\'activité', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 21h8M12 17v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>', '<p>Cette fonctionnalité est disponible lorsque le serveur Alex est connecté.</p><p style="margin-top:12px;color:rgba(255,246,234,0.5)">Le terminal affiche l\'activité en temps réel d\'Alex.</p>');
   });
   if(mediaBtn) mediaBtn.addEventListener('click', (e)=>{
     e.stopPropagation();
     toolsDropdown.classList.remove('open');
-    showToolModal('Multimédia', '🎬', '<p>Cette fonctionnalité est disponible lorsque le serveur Alex est connecté.</p><p style="margin-top:12px;color:rgba(255,246,234,0.5)">Gérez vos images, vidéos, PDFs et fichiers audio.</p>');
+    showToolModal('Multimédia', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="2.18" stroke="currentColor" stroke-width="1.8"/><path d="M10 9l5 3-5 3V9z" fill="currentColor"/></svg>', '<p>Cette fonctionnalité est disponible lorsque le serveur Alex est connecté.</p><p style="margin-top:12px;color:rgba(255,246,234,0.5)">Gérez vos images, vidéos, PDFs et fichiers audio.</p>');
   });
 
   // Settings (ouvre le dashboard)
