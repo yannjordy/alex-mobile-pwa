@@ -648,7 +648,18 @@ function renderMediaSlider(tab) {
   slider.innerHTML = items.map((item, i) => {
     let content = '';
     if (tab === 'images') {
-      content = '<img src="' + escapeHtml(item.url) + '" loading="lazy" style="max-width:100%;max-height:60vh;object-fit:contain;border-radius:8px;cursor:pointer" onclick="openMediaViewer(\'' + escapeHtml(item.url) + '\',\'image\')" onerror="this.style.display=\'none\'">';
+      const imgUrl = escapeHtml(item.url);
+      content = '<div class="media-image-wrap">' +
+        '<img src="' + imgUrl + '" loading="lazy" style="max-width:100%;max-height:60vh;object-fit:contain;border-radius:8px;cursor:pointer" onclick="openMediaViewer(\'' + imgUrl + '\',\'image\')" onerror="this.style.display=\'none\'">' +
+        '<div class="media-image-actions">' +
+          '<button class="media-action-btn" onclick="event.stopPropagation();downloadMedia(\'' + imgUrl + '\',\'image\')" title="Enregistrer">' +
+            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+            ' Enregistrer</button>' +
+          '<button class="media-action-btn" onclick="event.stopPropagation();setWallpaper(\'' + imgUrl + '\')" title="Fond d\'écran">' +
+            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="2"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/><path d="M3 16l5-5 4 4 3-3 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+            ' Fond écran</button>' +
+        '</div>' +
+      '</div>';
     } else if (tab === 'videos') {
       if (item.url.includes('youtube.com/embed') || item.url.includes('dailymotion.com/embed')) {
         content = '<iframe src="' + escapeHtml(item.url) + '" frameborder="0" allowfullscreen style="width:100%;aspect-ratio:16/9;border-radius:8px"></iframe>';
@@ -670,6 +681,55 @@ function renderMediaSlider(tab) {
   const next = slider.parentElement?.querySelector('.media-next');
   if (prev) prev.onclick = () => { mediaIndex[tab] = Math.max(0, idx - 1); renderMediaSlider(tab); };
   if (next) next.onclick = () => { mediaIndex[tab] = Math.min(items.length - 1, idx + 1); renderMediaSlider(tab); };
+}
+
+// Download media
+window.downloadMedia = async function(url, type) {
+  try {
+    showToast('Téléchargement en cours...');
+    const resp = await fetch(url);
+    const blob = await resp.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'alex-' + type + '-' + Date.now() + (url.includes('.png') ? '.png' : '.jpg');
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+    showToast('Image enregistrée !');
+  } catch(e) {
+    showToast('Erreur téléchargement');
+    // Fallback: open in new tab
+    window.open(url, '_blank');
+  }
+}
+
+// Set wallpaper
+window.setWallpaper = async function(url) {
+  try {
+    // Try to set as wallpaper via Electron API
+    if (window.require) {
+      const { ipcRenderer } = window.require('electron');
+      ipcRenderer.send('set-wallpaper', url);
+      showToast('Fond d\'écran appliqué !');
+      return;
+    }
+    // Fallback: download and suggest
+    showToast('Téléchargement pour fond d\'écran...');
+    const resp = await fetch(url);
+    const blob = await resp.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'wallpaper-' + Date.now() + '.jpg';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+    showToast('Image téléchargée. Appliquez-la comme fond d\'écran dans vos paramètres.');
+  } catch(e) {
+    showToast('Erreur fond d\'écran');
+    window.open(url, '_blank');
+  }
 }
 
 // Toast

@@ -1200,6 +1200,23 @@
   .media-slide video{ background:#000; }
   .media-slide iframe{ border:none; background:#fff; }
   .media-slide audio{ width:80%; max-width:400px; }
+  .media-image-wrap{ position:relative; display:inline-block; max-width:100%; }
+  .media-image-wrap img{ display:block; }
+  .media-image-actions{
+    position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
+    display:flex; gap:8px; z-index:10;
+  }
+  .media-action-btn{
+    display:flex; align-items:center; gap:6px;
+    padding:8px 14px; border:none; border-radius:20px;
+    background:rgba(0,0,0,0.7); backdrop-filter:blur(8px);
+    color:#fff; font-size:12px; font-weight:600;
+    cursor:pointer; transition:all 0.2s;
+    white-space:nowrap;
+  }
+  .media-action-btn:hover, .media-action-btn:active{
+    background:rgba(255,157,61,0.9); transform:scale(1.05);
+  }
   /* Animation de chargement pour les médias */
   .media-loading{
     display:flex; align-items:center; justify-content:center;
@@ -1842,7 +1859,7 @@
         <div id="chatArea" style="flex:1;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:8px"></div>
 
         <div id="inputBar" style="flex-shrink:0;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom)">
-          <div id="inputContainer" style="margin:8px 12px;display:flex;flex-direction:column;gap:0;padding:10px 12px;border:1px solid rgba(255,157,61,0.25);border-radius:16px;background:rgba(255,157,61,0.05)">
+          <div id="inputContainer" style="margin:8px auto;max-width:600px;width:calc(100% - 24px);display:flex;flex-direction:column;gap:0;padding:10px 12px;border:1px solid rgba(255,157,61,0.25);border-radius:16px;background:rgba(255,157,61,0.05)">
             <div id="filePreview" style="display:none;flex-wrap:wrap;gap:8px;padding-bottom:8px"></div>
             <div style="display:flex;align-items:center;gap:8px">
               <button class="round-btn" id="uploadBtn" title="Joindre un fichier" style="flex-shrink:0;width:36px;height:36px">
