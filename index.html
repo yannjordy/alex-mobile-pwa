@@ -7236,25 +7236,56 @@ setTimeout(showWelcomeMsg, 100);
     showToolModal(title, '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#ef4444" stroke-width="1.8"/><path d="M12 8v4M12 16h.01" stroke="#ef4444" stroke-width="1.8" stroke-linecap="round"/></svg>', content);
   }
 
+  function showLoadingModal(title, icon){
+    showToolModal(title, icon, '<div style="text-align:center;padding:20px"><div class="alex-loading"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div><div style="margin-top:12px;color:rgba(255,246,234,0.5);font-size:13px">Chargement...</div></div>');
+  }
+
   if(codeBtn) codeBtn.addEventListener('click', (e)=>{
     e.stopPropagation();
     toolsDropdown.classList.remove('open');
-    showErrorModal('Éditeur de code', 'Impossible de se connecter au serveur Alex', 'GET /api/code/list ENOTFOUND\n→ Le serveur backend n\'est pas accessible\n→ URL: '+API+'\n→ Vérifiez que le serveur Alex est démarré');
+    showLoadingModal('Éditeur de code', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><polyline points="16,18 22,12 16,6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><polyline points="8,6 2,12 8,18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+    fetch(API + '/code/list').then(r=>r.json()).then(data=>{
+      const files = (data.files||[]).map(f=>'<div style="padding:8px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;font-family:monospace;font-size:13px;color:#ffddbb;cursor:pointer" onclick="openCodeModal(\''+f.path+'\')">'+f.path+'</div>').join('');
+      showToolModal('Éditeur de code', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><polyline points="16,18 22,12 16,6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><polyline points="8,6 2,12 8,18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>', '<div style="display:flex;flex-direction:column;gap:6px">'+files+'</div>');
+    }).catch(err=>{
+      showErrorModal('Éditeur de code', 'Impossible de se connecter au serveur', err.message+'\n→ URL: '+API+'/code/list');
+    });
   });
   if(mapBtn) mapBtn.addEventListener('click', (e)=>{
     e.stopPropagation();
     toolsDropdown.classList.remove('open');
-    showErrorModal('Carte du monde', 'Impossible de charger la carte', 'GET /api/position ENOTFOUND\n→ Le serveur backend n\'est pas accessible\n→ URL: '+API+'\n→ Le service de géolocalisation est indisponible');
+    showLoadingModal('Carte du monde', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 2v16M16 6v16" stroke="currentColor" stroke-width="1.8"/></svg>');
+    fetch(API + '/position').then(r=>r.json()).then(data=>{
+      const pos = data.position || data;
+      showToolModal('Carte du monde', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 2v16M16 6v16" stroke="currentColor" stroke-width="1.8"/></svg>', '<div style="text-align:center"><div style="font-size:48px;margin-bottom:12px">📍</div><div style="font-size:16px;color:#ffc98c;margin-bottom:8px">Position actuelle</div><div style="font-size:13px;color:rgba(255,246,234,0.6)">Lat: '+pos.lat+' | Lon: '+pos.lon+'</div><div style="margin-top:12px"><a href="https://www.openstreetmap.org/?mlat='+pos.lat+'&mlon='+pos.lon+'" target="_blank" style="color:#8ab4f8">Ouvrir dans OpenStreetMap</a></div></div>');
+    }).catch(err=>{
+      showErrorModal('Carte du monde', 'Impossible de charger la position', err.message+'\n→ URL: '+API+'/position');
+    });
   });
   if(termBtn) termBtn.addEventListener('click', (e)=>{
     e.stopPropagation();
     toolsDropdown.classList.remove('open');
-    showErrorModal('Terminal d\'activité', 'Connexion au terminal échouée', 'WebSocket ws://'+location.host+'/ws/activity FAILED\n→ Code: ECONNREFUSED\n→ Le serveur WebSocket n\'est pas actif\n→ Vérifiez alex-assistant.service');
+    showLoadingModal('Terminal d\'activité', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 21h8M12 17v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>');
+    fetch(API + '/activity').then(r=>r.json()).then(data=>{
+      const logs = (data.logs||[]).map(l=>'<div style="padding:4px 8px;font-family:monospace;font-size:12px;color:rgba(255,246,234,0.7);border-bottom:1px solid rgba(255,255,255,0.05)">'+l+'</div>').join('');
+      showToolModal('Terminal d\'activité', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 21h8M12 17v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>', '<div style="max-height:400px;overflow-y:auto;background:rgba(0,0,0,0.3);border-radius:8px;padding:8px">'+logs+'</div>');
+    }).catch(err=>{
+      showErrorModal('Terminal d\'activité', 'Connexion au serveur échouée', err.message+'\n→ URL: '+API+'/activity');
+    });
   });
   if(mediaBtn) mediaBtn.addEventListener('click', (e)=>{
     e.stopPropagation();
     toolsDropdown.classList.remove('open');
-    showErrorModal('Multimédia', 'Impossible de charger les médias', 'GET /api/media/list ENOTFOUND\n→ Le serveur backend n\'est pas accessible\n→ URL: '+API+'/api/media\n→ Aucun média disponible hors-ligne');
+    showLoadingModal('Multimédia', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="2.18" stroke="currentColor" stroke-width="1.8"/><path d="M10 9l5 3-5 3V9z" fill="currentColor"/></svg>');
+    fetch(API + '/media/list').then(r=>r.json()).then(data=>{
+      const items = (data.media||[]).map(m=>{
+        const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(m.url);
+        return '<div style="padding:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px">'+(isImg ? '<img src="'+m.url+'" style="width:100%;border-radius:6px;margin-bottom:6px">' : '')+'<div style="font-size:13px;color:#ffddbb">'+m.name+'</div></div>';
+      }).join('');
+      showToolModal('Multimédia', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="2.18" stroke="currentColor" stroke-width="1.8"/><path d="M10 9l5 3-5 3V9z" fill="currentColor"/></svg>', '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px">'+items+'</div>');
+    }).catch(err=>{
+      showErrorModal('Multimédia', 'Impossible de charger les médias', err.message+'\n→ URL: '+API+'/media/list');
+    });
   });
 
   // Settings (ouvre le dashboard)
