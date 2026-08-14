@@ -1841,23 +1841,29 @@
       <div class="page page-chat" id="pageChat">
         <div id="chatArea" style="flex:1;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:8px"></div>
 
-        <div id="inputBar" style="flex-shrink:0">
-          <button class="round-btn" id="uploadBtn" title="Joindre un fichier">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" stroke="#ffddbb" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </button>
-          <input id="textInput" type="text" placeholder="Écrire à Alex…">
-          <button class="round-btn" id="sendBtn" title="Envoyer vocal">
-            <svg id="sendIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" style="display:none">
-              <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="#ffddbb" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
-            </svg>
-            <svg id="micIcon" width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <rect x="9" y="2" width="6" height="12" rx="3" stroke="#ffddbb" stroke-width="1.8"/>
-              <path d="M5 11a7 7 0 0014 0M12 19v3M9 22h6" stroke="#ffddbb" stroke-width="1.8" stroke-linecap="round"/>
-            </svg>
-          </button>
+        <div id="inputBar" style="flex-shrink:0;padding-bottom:env(safe-area-inset-bottom)">
+          <div id="filePreview" style="display:none;padding:8px 12px;border-top:1px solid rgba(255,157,61,0.1)"></div>
+          <div id="inputRow" style="display:flex;align-items:center;gap:8px;padding:8px 12px">
+            <button class="round-btn" id="uploadBtn" title="Joindre un fichier" style="flex-shrink:0">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.19 9.19a2 2 0 01-2.83-2.83l8.49-8.48" stroke="#ffddbb" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            <input id="textInput" type="text" placeholder="Écrire à Alex…" style="flex:1;min-width:0">
+            <button class="round-btn" id="micActionBtn" title="Micro" style="flex-shrink:0">
+              <svg id="micActionIcon" width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <rect x="9" y="2" width="6" height="12" rx="3" stroke="#ffddbb" stroke-width="1.8"/>
+                <path d="M5 11a7 7 0 0014 0M12 19v3M9 22h6" stroke="#ffddbb" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+            </button>
+            <button class="round-btn" id="sendBtn" title="Envoyer" style="flex-shrink:0">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="#ffddbb" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </div>
         </div>
+      </div>
       </div>
 
       <!-- PAGE 2 : ORB (pas de barre de saisie) -->
@@ -3056,21 +3062,58 @@ const chatArea = document.getElementById('chatArea');
 const textInput = document.getElementById('textInput');
 const sendBtn = document.getElementById('sendBtn');
 const uploadBtn = document.getElementById('uploadBtn');
-const sendIcon = document.getElementById('sendIcon');
-const micIcon = document.getElementById('micIcon');
+const micActionBtn = document.getElementById('micActionBtn');
+const filePreview = document.getElementById('filePreview');
+let pendingFiles = [];
 
-// Toggle send/mic icon based on input
-function updateSendIcon(){
-  if(textInput.value.trim()){
-    sendIcon.style.display = '';
-    micIcon.style.display = 'none';
-  } else {
-    sendIcon.style.display = 'none';
-    micIcon.style.display = '';
+// File preview management
+function updateFilePreview(){
+  if(!pendingFiles.length){
+    filePreview.style.display = 'none';
+    filePreview.innerHTML = '';
+    return;
   }
+  filePreview.style.display = 'flex';
+  filePreview.style.flexWrap = 'wrap';
+  filePreview.style.gap = '8px';
+  filePreview.innerHTML = '';
+  pendingFiles.forEach((file, idx)=>{
+    const ext = file.name.split('.').pop().toLowerCase();
+    const isImg = ['jpg','jpeg','png','gif','webp','svg','bmp'].includes(ext);
+    const isPdf = ext === 'pdf';
+    const isDoc = ['doc','docx','txt','md','rtf'].includes(ext);
+    const isAudio = ['mp3','wav','ogg','flac','aac','m4a'].includes(ext);
+    const isVideo = ['mp4','webm','mov','avi'].includes(ext);
+    const widget = document.createElement('div');
+    widget.style.cssText = 'position:relative;display:inline-flex;align-items:center;gap:6px;padding:6px 10px;background:rgba(255,157,61,0.1);border:1px solid rgba(255,157,61,0.2);border-radius:10px;font-size:12px;color:#ffddbb;max-width:180px';
+    let icon = '';
+    if(isImg){
+      const url = URL.createObjectURL(file);
+      widget.innerHTML = '<img src="'+url+'" style="width:32px;height:32px;border-radius:6px;object-fit:cover"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">'+file.name+'</span>';
+    } else if(isPdf){
+      icon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="#ef4444" stroke-width="1.8"/><path d="M14 2v6h6" stroke="#ef4444" stroke-width="1.8"/></svg>';
+      widget.innerHTML = icon + '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">'+file.name+'</span>';
+    } else if(isDoc){
+      icon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="#4A90D9" stroke-width="1.8"/><path d="M14 2v6h6" stroke="#4A90D9" stroke-width="1.8"/></svg>';
+      widget.innerHTML = icon + '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">'+file.name+'</span>';
+    } else if(isAudio){
+      icon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M9 18V5l12-2v13" stroke="#1DB954" stroke-width="1.8"/><circle cx="6" cy="18" r="3" stroke="#1DB954" stroke-width="1.8"/><circle cx="18" cy="16" r="3" stroke="#1DB954" stroke-width="1.8"/></svg>';
+      widget.innerHTML = icon + '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">'+file.name+'</span>';
+    } else if(isVideo){
+      icon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="2.18" stroke="#FF0000" stroke-width="1.8"/><path d="M10 9l5 3-5 3V9z" fill="#FF0000"/></svg>';
+      widget.innerHTML = icon + '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">'+file.name+'</span>';
+    } else {
+      icon = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9l-7-7z" stroke="#ffc98c" stroke-width="1.8"/><path d="M13 2v7h7" stroke="#ffc98c" stroke-width="1.8"/></svg>';
+      widget.innerHTML = icon + '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">'+file.name+'</span>';
+    }
+    const removeBtn = document.createElement('button');
+    removeBtn.innerHTML = '✕';
+    removeBtn.style.cssText = 'background:rgba(239,68,68,0.3);border:none;color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center';
+    removeBtn.onclick = ()=>{ pendingFiles.splice(idx,1); updateFilePreview(); };
+    widget.appendChild(removeBtn);
+    filePreview.appendChild(widget);
+  });
 }
-textInput.addEventListener('input', updateSendIcon);
-updateSendIcon();
 
 // Upload menu
 let uploadMenuEl = null;
@@ -3117,14 +3160,32 @@ function openCamera(){
 }
 function handleFiles(files){
   if(!files || !files.length) return;
-  for(const f of files) sendFileAttachment(f);
+  for(const f of files) pendingFiles.push(f);
+  updateFilePreview();
 }
 function sendFileAttachment(file){
   const reader = new FileReader();
   reader.onload = ()=>{
     const ext = file.name.split('.').pop().toLowerCase();
     const isImage = ['jpg','jpeg','png','gif','webp','svg','bmp'].includes(ext);
-    const content = isImage ? '![image](data:'+file.type+';base64,'+btoa(String.fromCharCode(...new Uint8Array(reader.result)))+')' : 'Fichier: '+file.name;
+    const isPdf = ext === 'pdf';
+    const isDoc = ['doc','docx','txt','md','rtf'].includes(ext);
+    const isAudio = ['mp3','wav','ogg','flac','aac','m4a'].includes(ext);
+    const isVideo = ['mp4','webm','mov','avi'].includes(ext);
+    let content = '';
+    if(isImage){
+      content = '![image](data:'+file.type+';base64,'+btoa(String.fromCharCode(...new Uint8Array(reader.result)))+')';
+    } else if(isPdf){
+      content = '📎 PDF: '+file.name;
+    } else if(isDoc){
+      content = '📎 Document: '+file.name;
+    } else if(isAudio){
+      content = '🎵 Audio: '+file.name;
+    } else if(isVideo){
+      content = '🎬 Vidéo: '+file.name;
+    } else {
+      content = '📎 Fichier: '+file.name;
+    }
     sendMessage(content, 'user');
   };
   reader.readAsArrayBuffer(file);
@@ -4796,17 +4857,24 @@ checkNetwork();
 
 sendBtn.addEventListener('click', ()=>{
   const text = textInput.value.trim();
-  if(text){
-    // Envoyer le message texte
+  const hasFiles = pendingFiles.length > 0;
+  if(text || hasFiles){
     const w = document.getElementById('welcomeMsg');
     if(w) w.remove();
-    sendMessage(text, 'user');
-    textInput.value = '';
-    updateSendIcon();
-    handleAlexReply(text);
+    // Send pending files first
+    if(hasFiles){
+      for(const f of pendingFiles) sendFileAttachment(f);
+      pendingFiles = [];
+      updateFilePreview();
+    }
+    // Send text message
+    if(text){
+      sendMessage(text, 'user');
+      textInput.value = '';
+      handleAlexReply(text);
+    }
     scheduleAutoCollapse();
   } else {
-    // Basculer le micro
     toggleMic();
   }
 });
@@ -4817,7 +4885,7 @@ textInput.addEventListener('keydown', (e)=>{
 function toggleMic(){
   if(!micActive){
     listenAlways = document.getElementById('settingListen').checked;
-    sendBtn.classList.add('active');
+    micActionBtn.classList.add('active');
     document.getElementById('islandMic').classList.remove('muted');
     appEl.classList.add('mic-active');
     setOrbState('listening');
@@ -4826,10 +4894,9 @@ function toggleMic(){
         startServerSTT();
       } else {
         console.warn('[MIC] Connexion micro échouée');
-        sendBtn.classList.remove('active');
+        micActionBtn.classList.remove('active');
         appEl.classList.remove('mic-active');
         setOrbState('idle');
-        // Retry once more
         setTimeout(()=>{
           if(!micActive) connectMic().then(ok=>{
             if(ok) startServerSTT();
@@ -4844,12 +4911,17 @@ function toggleMic(){
       micSource.mediaStream.getTracks().forEach(t=> t.stop());
     }
     micActive = false;
-    sendBtn.classList.remove('active');
+    micActionBtn.classList.remove('active');
     document.getElementById('islandMic').classList.add('muted');
     appEl.classList.remove('mic-active');
     setOrbState('idle');
   }
 }
+
+micActionBtn.addEventListener('click', (e)=>{
+  e.stopPropagation();
+  toggleMic();
+});
 
 document.getElementById('islandMic').addEventListener('click', (e)=>{
   e.stopPropagation();
@@ -4968,7 +5040,7 @@ function onWakeDetected(){
   if(typeof require !== 'undefined'){
     try{ require('electron').ipcRenderer.send('set-mode', 'full'); }catch(e){}
     if(!micActive){
-      sendBtn.classList.add('active');
+      micActionBtn.classList.add('active');
       connectMic().then(()=>{
         startServerSTT();
       });
