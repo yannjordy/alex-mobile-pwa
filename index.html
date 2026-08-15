@@ -16,6 +16,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.170.0/build/three.module.js" } }
+</script>
 <style>
   :root{
     --amber: #ff9d3d;
@@ -2405,14 +2408,15 @@ if(typeof require === 'undefined'){
 }
 /* ── API URL configurable ── */
 const API = localStorage.getItem('alex_api') || location.origin;
-let THREE;
-import('https://unpkg.com/three@0.170.0/build/three.module.js').then(m => {
-  THREE = m.default || m;
-  initOrb();
-}).catch(e=>{ console.error('THREE.js import failed:', e.message || e); });
 
-function initOrb(){
-if(!THREE){ console.warn('initOrb: THREE is null'); return; }
+/* =====================================================================
+   ORB — reprend le moteur construit dans oda-orb-desktop (sphère en
+   rubans, boids 3D, répulsion au clic, réactivité micro, formes ?/!/✕)
+   Adapté ici pour vivre dans un petit conteneur (chat) plutôt qu'en
+   plein écran.
+   ===================================================================== */
+import * as THREE from 'three';
+
 const R = 60;
 const container = document.getElementById('stage3d');
 let W,H;
@@ -3055,8 +3059,6 @@ function animate(ts){
   renderer.render(scene, camera);
 }
 requestAnimationFrame(animate);
-
-} // end initOrb
 
 /* --- Logos intégrations --- */
 const _logoCache = {};
