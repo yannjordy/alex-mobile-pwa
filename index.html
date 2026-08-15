@@ -2911,6 +2911,43 @@ function stopServerSTT(){
   mediaRecorder = null;
 }
 
+// --- Voice record : cliquer micro = start, recliquer = stop + envoyer ---
+let voiceRecordStream = null;
+let voiceRecordRecorder = null;
+let voiceRecordChunks = [];
+
+async function startVoiceRecord(){
+  try {
+    voiceRecordStream = await navigator.mediaDevices.getUserMedia({audio: true});
+    voiceRecordChunks = [];
+    voiceRecordRecorder = new MediaRecorder(voiceRecordStream, { mimeType: 'audio/webm;codecs=opus' });
+    voiceRecordRecorder.ondataavailable = (e) => { if(e.data.size > 0) voiceRecordChunks.push(e.data); };
+    voiceRecordRecorder.onstop = sendVoiceRecord;
+    voiceRecordRecorder.start();
+    console.log('[VOICE] Enregistrement démarré');
+  } catch(err){
+    console.warn('[VOICE] Erreur micro:', err.message);
+  }
+}
+
+function stopVoiceRecord(){
+  if(voiceRecordRecorder && voiceRecordRecorder.state === 'recording'){
+    voiceRecordRecorder.stop();
+  }
+  if(voiceRecordStream){
+    voiceRecordStream.getTracks().forEach(t => t.stop());
+    voiceRecordStream = null;
+  }
+}
+
+function sendVoiceRecord(){
+  if(voiceRecordChunks.length === 0) return;
+  const blob = new Blob(voiceRecordChunks, { type: 'audio/webm' });
+  const url = URL.createObjectURL(blob);
+  const html = '<div class="file-widget"><div class="file-icon" style="background:rgba(29,185,84,0.1)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" stroke="#1DB954" stroke-width="1.8"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8" stroke="#1DB954" stroke-width="1.8" stroke-linecap="round"/></svg></div><div class="file-info"><div class="file-name">Message vocal</div><div class="file-meta">Audio · '+Math.round(blob.size/1024)+' Ko</div></div></div><audio src="'+url+'" controls style="width:100%;max-width:300px;margin-top:8px;border-radius:8px"></audio>';
+  addMsg('user', html, 'has-file');
+}
+
 let micAutoStarted = false;
 async function autoStartMic(){
   if(micAutoStarted || micActive) return;
@@ -5300,16 +5337,11 @@ function toggleMic(){
         micActionBtn.classList.remove('active');
         appEl.classList.remove('mic-active');
         setOrbState('idle');
-        setTimeout(()=>{
-          if(!micActive) connectMic().then(ok=>{
-            if(ok) startVoiceRecord();
-          });
-        }, 3000);
       }
     });
   } else {
     listenAlways = false;
-    stopServerSTT();
+    stopVoiceRecord();
     if(micSource && micSource.mediaStream){
       micSource.mediaStream.getTracks().forEach(t=> t.stop());
     }
