@@ -153,6 +153,8 @@
   }
   .msg.user .widget-media img{
     display:block;
+    max-width:100%;
+    height:auto;
   }
   .msg.user div[style*="display:flex"][style*="padding:8px 12px"]{
     text-align:left;
@@ -597,8 +599,8 @@
   .widget-music .bar{ height:3px; background:rgba(255,157,61,0.15); border-radius:2px; margin:8px 0 6px; overflow:hidden; }
   .widget-music .bar-inner{ height:100%; width:40%; background:#ff9d3d; border-radius:2px; animation: musicBar 1.2s ease-in-out infinite alternate; }
   @keyframes musicBar{ 0%{ width:20%; } 100%{ width:80%; } }
-  .widget-media{ max-width:100%; margin:4px 0; animation: widgetIn .4s ease-out; }
-  .widget-media img{ max-width:320px; max-height:320px; border-radius:14px; border:1px solid rgba(255,255,255,0.08); cursor:pointer; transition:transform .2s; display:block; }
+  .widget-media{ max-width:100%; margin:4px 0; animation: widgetIn .4s ease-out; overflow:hidden; }
+  .widget-media img{ max-width:100%; max-height:320px; border-radius:14px; border:1px solid rgba(255,255,255,0.08); cursor:pointer; transition:transform .2s; display:block; object-fit:contain; }
   .widget-media img:hover{ transform:scale(1.02); }
   .widget-media .img-error{ font-size:12px; color:#888; padding:20px; text-align:center; background:rgba(255,255,255,0.03); border-radius:14px; border:1px dashed rgba(255,255,255,0.1); }
   .widget-media .video-embed{ position:relative; width:320px; height:180px; border-radius:14px; overflow:hidden; border:1px solid rgba(255,255,255,0.08); }
@@ -3307,7 +3309,7 @@ function sendFileAttachment(file){
     let html = '';
     if(isImage){
       const b64 = btoa(new Uint8Array(reader.result).reduce((d,b)=>d+String.fromCharCode(b),''));
-      html = '<div class="widget-media"><img src="data:'+file.type+';base64,'+b64+'" alt="'+escHtml(file.name)+'" style="max-width:320px;max-height:320px;border-radius:14px;border:1px solid rgba(255,157,61,0.25);cursor:pointer;display:block" onclick="openMediaViewer(this.src,\'image\')"></div><div style="font-size:12px;color:rgba(255,246,234,0.5);margin-top:6px">'+escHtml(file.name)+'</div>';
+      html = '<div class="widget-media"><img src="data:'+file.type+';base64,'+b64+'" alt="'+escHtml(file.name)+'" style="max-width:100%;max-height:240px;border-radius:12px;border:1px solid rgba(255,157,61,0.25);cursor:pointer;display:block;object-fit:contain" onclick="openMediaViewer(this.src,\'image\')"></div><div style="font-size:12px;color:rgba(255,246,234,0.5);margin-top:6px">'+escHtml(file.name)+'</div>';
     } else if(isPdf){
       html = '<div style="display:flex;align-items:stretch;gap:0;background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.2);border-radius:14px;overflow:hidden;max-width:320px"><div style="display:flex;align-items:center;justify-content:center;width:80px;min-height:80px;background:rgba(239,68,68,0.1);border-right:1px solid rgba(239,68,68,0.15)"><svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="#ef4444" stroke-width="1.8"/><path d="M14 2v6h6" stroke="#ef4444" stroke-width="1.8"/><path d="M8 13h8M8 17h5" stroke="#ef4444" stroke-width="1.5" stroke-linecap="round"/></svg></div><div style="display:flex;flex-direction:column;justify-content:center;padding:12px 14px;min-width:0"><div style="color:#ffddbb;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escHtml(file.name)+'</div><div style="color:rgba(255,246,234,0.45);font-size:12px;margin-top:4px">PDF · '+formatFileSize(file.size)+'</div></div></div>';
     } else if(isDoc){
