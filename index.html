@@ -16,9 +16,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-<script type="importmap">
-{ "imports": { "three": "https://unpkg.com/three@0.170.0/build/three.module.js" } }
-</script>
+<script src="https://unpkg.com/three@0.170.0/build/three.min.js" defer onerror="console.warn('THREE.js failed to load')"></script>
 <style>
   :root{
     --amber: #ff9d3d;
@@ -487,6 +485,59 @@
   }
   .widget-timer .controls button:hover{ background:rgba(255,157,61,0.25); }
   .widget-music{ text-align:center; }
+  
+  /* --- Task Progress Animations --- */
+  .alex-task-status{
+    display:flex; align-items:center; gap:8px;
+    padding:8px 12px; margin:6px 0;
+    background:rgba(255,157,61,0.08);
+    border:1px solid rgba(255,157,61,0.2);
+    border-radius:10px;
+    font-size:12px; color:rgba(255,246,234,0.8);
+    animation:taskPulse 2s ease-in-out infinite;
+  }
+  .alex-task-status.completed{
+    background:rgba(123,216,138,0.1);
+    border-color:rgba(123,216,138,0.3);
+    animation:none;
+  }
+  .alex-task-status.error{
+    background:rgba(255,122,122,0.1);
+    border-color:rgba(255,122,122,0.3);
+    animation:none;
+  }
+  @keyframes taskPulse{
+    0%,100%{ opacity:1; }
+    50%{ opacity:0.7; }
+  }
+  .alex-task-spinner{
+    width:14px; height:14px;
+    border:2px solid rgba(255,157,61,0.3);
+    border-top-color:#ffc98c;
+    border-radius:50%;
+    animation:spin 1s linear infinite;
+  }
+  @keyframes spin{
+    to{ transform:rotate(360deg); }
+  }
+  .alex-task-icon{ font-size:14px; }
+  .alex-task-text{ flex:1; }
+  .alex-task-progress{
+    width:100%; height:4px;
+    background:rgba(255,255,255,0.1);
+    border-radius:2px; margin-top:6px;
+    overflow:hidden;
+  }
+  .alex-task-progress-bar{
+    height:100%;
+    background:linear-gradient(90deg,#ffc98c,#ff9d3d);
+    border-radius:2px;
+    animation:progressGrow 2s ease-out forwards;
+  }
+  @keyframes progressGrow{
+    from{ width:0%; }
+    to{ width:100%; }
+  }
   .widget-music svg:first-child{ display:block; margin:0 auto 6px; }
   .widget-music .track{ font-size:14px; color:#ffc98c; }
   .widget-music .artist{ font-size:12px; color:rgba(255,246,234,0.6); }
@@ -2318,8 +2369,8 @@ if(typeof require === 'undefined'){
 }
 /* ── API URL configurable ── */
 const API = localStorage.getItem('alex_api') || location.origin;
-let THREE;
-import('three').then(m => { THREE = m; initOrb(); }).catch(()=>{ console.warn('THREE.js unavailable'); });
+let THREE = window.THREE;
+if(THREE) initOrb(); else window.addEventListener('load', ()=>{ THREE = window.THREE; if(THREE) initOrb(); });
 
 function initOrb(){
 if(!THREE) return;
@@ -4525,8 +4576,9 @@ async function handleAlexReply(userText, chatCid = ''){
   if(userText.trim().endsWith('?')) showShape('question', 800);
   const msgDiv = document.createElement('div');
   msgDiv.className = 'msg alex';
-  msgDiv.innerHTML = '<div class="alex-loading"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>';
+  msgDiv.innerHTML = '<div class="alex-task-status"><span class="alex-task-spinner"></span><span class="alex-task-text">Alex reflechit...</span></div>';
   chatArea.appendChild(msgDiv);
+  scrollToBottom();
   let fullReply = '';
   let hasConfirm = false;
   let sentenceBuf = '';
@@ -4639,8 +4691,41 @@ async function handleAlexReply(userText, chatCid = ''){
             break;
           }
           if(parsed.reply && parsed.source?.startsWith('tool')){
-            msgDiv.innerHTML = renderMediaContent(parsed.reply);
+            // Afficher le statut de la tache avec animation
+            const toolName = parsed.source.replace('tool:', '');
+            const toolIcons = {
+              'creer_site_web': '🌐', 'recherche_web': '🔍', 'recherche_image': '🖼️',
+              'meteo': '🌤️', 'lister_dossier': '📁', 'lire_fichier': '📄',
+              'executer_commande': '⚡', 'generer_mdp': '🔑', 'couleurs_palette': '🎨',
+              'formater_json': '{ }', 'generer_qr': '📱', 'lancer_serveur_dev': '🚀'
+            };
+            const icon = toolIcons[toolName] || '🔧';
+            const isError = parsed.reply.startsWith('❌') || parsed.reply.startsWith('Erreur');
+            
+            // Creer le widget de statut
+            const statusDiv = document.createElement('div');
+            statusDiv.className = 'alex-task-status' + (isError ? ' error' : ' completed');
+            statusDiv.innerHTML = `
+              <span class="alex-task-icon">${isError ? '❌' : '✅'}</span>
+              <span class="alex-task-text">${isError ? 'Erreur' : 'Termine'} : ${escapeHtml(toolName)}</span>
+            `;
+            
+            // Masquer le loading
+            const loading = msgDiv.querySelector('.alex-loading');
+            if(loading) loading.style.display = 'none';
+            
+            // Afficher le resultat dans une bulle
+            msgDiv.innerHTML = '';
+            msgDiv.appendChild(statusDiv);
+            
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'alex-reply-text';
+            resultDiv.innerHTML = renderMediaContent(parsed.reply);
+            msgDiv.appendChild(resultDiv);
+            
             fullReply = parsed.reply;
+            setOrbState('idle');
+            scrollToBottom();
             break;
           }
           if(parsed.proposal){
