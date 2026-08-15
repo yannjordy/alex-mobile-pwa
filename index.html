@@ -16,7 +16,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-<script src="https://unpkg.com/three@0.170.0/build/three.min.js" defer onerror="console.warn('THREE.js failed to load')"></script>
+<script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.170.0/build/three.module.js" } }
+</script>
 <style>
   :root{
     --amber: #ff9d3d;
@@ -521,6 +523,43 @@
     to{ transform:rotate(360deg); }
   }
   .alex-task-icon{ font-size:14px; }
+  .alex-task-text{ font-size:12px; color:rgba(255,246,234,0.8); }
+  
+  /* --- Clarify Widget --- */
+  .widget-clarify{
+    align-self:flex-start; max-width:280px;
+    background:rgba(255,157,61,0.06);
+    border:1px solid rgba(255,157,61,0.15);
+    border-radius:16px; padding:12px;
+    margin:4px 0;
+    animation: widgetIn .4s ease-out;
+  }
+  .widget-clarify .clarify-title{
+    font-size:13px; color:#ffc98c; margin-bottom:8px;
+    display:flex; align-items:center; gap:6px;
+  }
+  .widget-clarify .clarify-options{
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .widget-clarify .clarify-option{
+    padding:8px 12px; border-radius:10px;
+    background:rgba(255,157,61,0.08);
+    border:1px solid rgba(255,157,61,0.2);
+    color:#fff6ea; font-size:13px; cursor:pointer;
+    transition: all 0.2s ease;
+    display:flex; align-items:center; gap:8px;
+  }
+  .widget-clarify .clarify-option:hover{
+    background:rgba(255,157,61,0.15);
+    border-color:rgba(255,157,61,0.35);
+    transform:translateX(4px);
+  }
+  .widget-clarify .clarify-option:active{
+    transform:scale(0.98);
+  }
+  .widget-clarify .clarify-option .option-icon{
+    font-size:14px; opacity:0.8;
+  }
   .alex-task-text{ flex:1; }
   .alex-task-progress{
     width:100%; height:4px;
@@ -2369,8 +2408,8 @@ if(typeof require === 'undefined'){
 }
 /* ── API URL configurable ── */
 const API = localStorage.getItem('alex_api') || location.origin;
-let THREE = window.THREE;
-if(THREE) initOrb(); else window.addEventListener('load', ()=>{ THREE = window.THREE; if(THREE) initOrb(); });
+let THREE;
+import('three').then(m => { THREE = m.default || m; initOrb(); }).catch(e=>{ console.warn('THREE.js load failed:', e); });
 
 function initOrb(){
 if(!THREE) return;
@@ -3685,6 +3724,63 @@ function showConfirmWidget(cid, toolName, params, desc, risk){
   };
 }
 
+/* --- Widget de clarification (Alex demande plus de details) --- */
+function showClarifyWidget(question, options, callback){
+  const w = document.createElement('div');
+  w.className = 'widget widget-clarify';
+  
+  const optionsHtml = options.map((opt, i) => `
+    <div class="clarify-option" data-index="${i}">
+      <span class="option-icon">${opt.icon || '→'}</span>
+      <span>${escapeHtml(opt.text)}</span>
+    </div>
+  `).join('');
+  
+  w.innerHTML = `
+    <div class="clarify-title">
+      <span>💬</span>
+      <span>${escapeHtml(question)}</span>
+    </div>
+    <div class="clarify-options">${optionsHtml}</div>
+  `;
+  
+  chatArea.appendChild(w);
+  scrollToBottom();
+  
+  w.querySelectorAll('.clarify-option').forEach(opt => {
+    opt.onclick = async ()=>{
+      const index = parseInt(opt.dataset.index);
+      const selected = options[index];
+      
+      // Afficher la selection
+      w.innerHTML = `
+        <div class="clarify-title">
+          <span>✅</span>
+          <span>${escapeHtml(selected.text)}</span>
+        </div>
+      `;
+      
+      // Envoyer la reponse a Alex
+      if(callback) callback(selected);
+      
+      // Envoyer au serveur
+      try{
+        await fetch(API + '/clarify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            clarification_id: w.id,
+            option_index: index,
+            option_text: selected.text 
+          })
+        });
+      }catch(e){}
+    };
+  });
+  
+  return w;
+}
+
 /* --- Widgets de proposition (Alex suggère des actions) --- */
 let _proposalExpanded = false;
 let _proposalAutoCollapseTimer = null;
@@ -4851,6 +4947,21 @@ async function handleAlexReply(userText, chatCid = ''){
       }
       if(fullReply.trim()) msgDiv.innerHTML = renderAlexBubble(fullReply, true);
       scrollToBottom();
+      
+      // Detecter si Alex demande une clarification
+      if(fullReply.trim() && !hasConfirm){
+        const clarifyResult = detectClarifyRequest(fullReply);
+        if(clarifyResult){
+          showClarifyWidget(
+            clarifyResult.question,
+            clarifyResult.options,
+            (selected) => {
+              // Envoyer la reponse comme nouveau message
+              setTimeout(()=> handleUserMessage(selected.text), 300);
+            }
+          );
+        }
+      }
     }
     setStreaming(false);
     if(hasConfirm){
@@ -4885,6 +4996,97 @@ async function handleAlexReply(userText, chatCid = ''){
   } finally {
     currentAbort = null;
   }
+}
+
+/* --- Detection des demandes de clarification --- */
+function detectClarifyRequest(text){
+  const t = text.toLowerCase();
+  
+  // Patterns pour detecter les demandes de clarification
+  const patterns = [
+    { regex: /tu veux (?:un|une|des|le|la|les) ?(.+)\?/i, group: 1 },
+    { regex: /quel(?:le)?s? (?:style|type|format|theme|couleur|nom|titre) .+ ?\?/i },
+    { regex: /comment .+ s'appelle .+ ?\?/i },
+    { regex: /pour (?:quel|quelle) .+ .+ ?\?/i },
+    { regex: /preferes? .+ ou .+ ?\?/i },
+    { regex: /tu prefere .+ ?\?/i },
+  ];
+  
+  for(const p of patterns){
+    if(p.regex.test(text)){
+      // Extraire des options basees sur le contexte
+      const options = extractClarifyOptions(text);
+      if(options.length > 0){
+        return {
+          question: text.replace(/\?$/, '').trim(),
+          options: options
+        };
+      }
+    }
+  }
+  
+  return null;
+}
+
+function extractClarifyOptions(text){
+  const t = text.toLowerCase();
+  const options = [];
+  
+  // 1. Detecter les options avec "ou" (ex: "A ou B ?")
+  const orMatch = text.match(/(.+?) ou (.+?)\s*\?/i);
+  if(orMatch){
+    options.push({ text: orMatch[1].trim(), icon: '1️⃣' });
+    options.push({ text: orMatch[2].trim(), icon: '2️⃣' });
+    return options;
+  }
+  
+  // 2. Detecter les options dans une liste (ex: "un portfolio, un dashboard, ou un outil")
+  const listMatch = text.match(/(?:un|une|des|le|la|les)\s+([^,]+(?:,\s*(?:un|une|des|le|la|les)\s+[^,]+)*)/i);
+  if(listMatch){
+    const items = listMatch[0].split(/,\s*(?:ou\s+)?/i);
+    items.forEach((item, i) => {
+      const clean = item.replace(/^(?:et\s+|ou\s+)/i, '').trim();
+      if(clean.length > 3 && clean.length < 100){
+        options.push({ text: clean, icon: `${i+1}️⃣` });
+      }
+    });
+    if(options.length >= 2) return options.slice(0, 4); // Max 4 options
+  }
+  
+  // 3. Detecter les items listes avec des tirets ou puces
+  const bulletMatch = text.match(/[-•*]\s+(.+?)(?:\n|$)/gm);
+  if(bulletMatch && bulletMatch.length >= 2){
+    bulletMatch.slice(0, 4).forEach((item, i) => {
+      const clean = item.replace(/^[-•*]\s+/, '').trim();
+      if(clean.length > 3 && clean.length < 100){
+        options.push({ text: clean, icon: `${i+1}️⃣` });
+      }
+    });
+    if(options.length >= 2) return options;
+  }
+  
+  // 4. Options par defaut selon le contexte
+  options.length = 0; // Reset
+  if(t.includes('site') || t.includes('web') || t.includes('page')){
+    options.push({ text: 'Un site vitrine', icon: '🏪' });
+    options.push({ text: 'Un portfolio', icon: '🎨' });
+    options.push({ text: 'Un blog', icon: '📝' });
+  } else if(t.includes('musique') || t.includes('chanson')){
+    options.push({ text: 'Pop', icon: '🎵' });
+    options.push({ text: 'Rock', icon: '🎸' });
+    options.push({ text: 'Jazz', icon: '🎷' });
+  } else if(t.includes('image') || t.includes('photo')){
+    options.push({ text: 'Paysage', icon: '🏞️' });
+    options.push({ text: 'Portrait', icon: '👤' });
+    options.push({ text: 'Abstrait', icon: '🎭' });
+  } else {
+    // Options generiques
+    options.push({ text: 'Option 1', icon: '1️⃣' });
+    options.push({ text: 'Option 2', icon: '2️⃣' });
+    options.push({ text: 'Option 3', icon: '3️⃣' });
+  }
+  
+  return options;
 }
 
 function detectIslandInfo(text){
