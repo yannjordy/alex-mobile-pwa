@@ -2323,6 +2323,7 @@ import('three').then(m => { THREE = m; initOrb(); }).catch(()=>{ console.warn('T
 
 function initOrb(){
 if(!THREE) return;
+const R = 60;
 const container = document.getElementById('stage3d');
 let W,H;
 function getSize(){ W=container.clientWidth||100; H=container.clientHeight||100; }
