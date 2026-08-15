@@ -16,9 +16,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-<script type="importmap">
-{ "imports": { "three": "https://unpkg.com/three@0.170.0/build/three.module.js" } }
-</script>
 <style>
   :root{
     --amber: #ff9d3d;
@@ -2409,10 +2406,13 @@ if(typeof require === 'undefined'){
 /* ── API URL configurable ── */
 const API = localStorage.getItem('alex_api') || location.origin;
 let THREE;
-import('three').then(m => { THREE = m.default || m; initOrb(); }).catch(e=>{ console.warn('THREE.js load failed:', e); });
+import('https://unpkg.com/three@0.170.0/build/three.module.js').then(m => {
+  THREE = m.default || m;
+  initOrb();
+}).catch(e=>{ console.error('THREE.js import failed:', e.message || e); });
 
 function initOrb(){
-if(!THREE) return;
+if(!THREE){ console.warn('initOrb: THREE is null'); return; }
 const R = 60;
 const container = document.getElementById('stage3d');
 let W,H;
