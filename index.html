@@ -3444,11 +3444,11 @@ function playNextInQueue(){
 const stopBtn = document.getElementById('stopBtn');
 function setSpeaking(val){
   isSpeaking = val;
-  stopBtn.classList.toggle('visible', val || currentAbort !== null);
+  if(stopBtn) stopBtn.classList.toggle('visible', val || currentAbort !== null);
 }
 function setStreaming(val){
   isStreaming = val;
-  stopBtn.classList.toggle('visible', val || isSpeaking);
+  if(stopBtn) stopBtn.classList.toggle('visible', val || isSpeaking);
 }
 function stopAlex(){
   speechQueue = [];
@@ -3470,7 +3470,7 @@ function stopAlex(){
     startServerSTT();
   }
 }
-stopBtn.addEventListener('click', stopAlex);
+if(stopBtn) stopBtn.addEventListener('click', stopAlex);
 
 /* ===============================================================
    ICÔNES SVG — toutes les icônes de l'interface en vectoriel
