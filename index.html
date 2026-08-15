@@ -141,11 +141,22 @@
     white-space:pre-wrap;
     overflow-wrap:break-word; word-wrap:break-word;
     font-weight:700;
+    overflow:hidden;
   }
   .msg.user{
     align-self:flex-end;
     text-align:right;
     color:#ffc98c;
+  }
+  .msg.user .widget-media{
+    text-align:left;
+  }
+  .msg.user .widget-media img{
+    display:block;
+  }
+  .msg.user div[style*="display:flex"][style*="padding:8px 12px"]{
+    text-align:left;
+    justify-content:flex-start;
   }
   .msg.alex{
     align-self:flex-start;
