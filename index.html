@@ -320,12 +320,16 @@
     flex:1;
     background: rgba(255,255,255,0.05);
     border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 999px;
-    padding: 16px 20px;
+    border-radius: 16px;
+    padding: 12px 16px;
     color:#fff6ea;
-    font-size:16px;
+    font-size:15px;
     outline:none;
-    height:52px;
+    resize:none;
+    overflow-y:auto;
+    max-height:120px;
+    line-height:1.4;
+    font-family:inherit;
   }
   #textInput::placeholder{ color:rgba(255,246,234,0.4); }
   .round-btn{
@@ -2012,7 +2016,7 @@
                   <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.19 9.19a2 2 0 01-2.83-2.83l8.49-8.48" stroke="#ffddbb" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
               </button>
-              <input id="textInput" type="text" placeholder="Écrire à Alex…" style="flex:1;min-width:0;border:none;background:transparent;color:#ffddbb;font-size:15px;outline:none">
+              <textarea id="textInput" rows="1" placeholder="Écrire à Alex…" style="flex:1;min-width:0;border:none;background:transparent;color:#ffddbb;font-size:15px;outline:none;resize:none;overflow-y:auto;max-height:120px;line-height:1.4;font-family:inherit"></textarea>
               <button class="round-btn" id="micActionBtn" title="Micro" style="flex-shrink:0;width:40px;height:40px">
                 <svg id="micSendIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" style="display:none">
                   <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="#ffddbb" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
@@ -3240,7 +3244,11 @@ function updateMicIcon(){
     micActionBtn.title = 'Micro';
   }
 }
-textInput.addEventListener('input', updateMicIcon);
+textInput.addEventListener('input', ()=>{
+  updateMicIcon();
+  textInput.style.height = 'auto';
+  textInput.style.height = Math.min(textInput.scrollHeight, 120) + 'px';
+});
 
 // File preview management
 function updateFilePreview(){
@@ -5271,7 +5279,10 @@ micActionBtn.addEventListener('click', ()=>{
   }
 });
 textInput.addEventListener('keydown', (e)=>{
-  if(e.key === 'Enter') micActionBtn.click();
+  if(e.key === 'Enter' && !e.shiftKey){
+    e.preventDefault();
+    micActionBtn.click();
+  }
 });
 
 function toggleMic(){
@@ -5283,7 +5294,7 @@ function toggleMic(){
     setOrbState('listening');
     connectMic().then((ok)=>{
       if(ok){
-        startServerSTT();
+        startVoiceRecord();
       } else {
         console.warn('[MIC] Connexion micro échouée');
         micActionBtn.classList.remove('active');
@@ -5291,7 +5302,7 @@ function toggleMic(){
         setOrbState('idle');
         setTimeout(()=>{
           if(!micActive) connectMic().then(ok=>{
-            if(ok) startServerSTT();
+            if(ok) startVoiceRecord();
           });
         }, 3000);
       }
