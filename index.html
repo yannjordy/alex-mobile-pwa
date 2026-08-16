@@ -2179,6 +2179,12 @@
         <!-- Section Général -->
         <div class="dash-section active" id="sec-general">
           <div class="dash-card">
+            <h3>Connexion</h3>
+            <label style="display:block;margin-bottom:8px;color:rgba(255,246,234,0.7);font-size:13px">URL du serveur Alex (Termux / Localhost)</label>
+            <input id="settingApiUrl" type="text" placeholder="http://127.0.0.1:8000" style="width:100%;padding:10px 12px;border:1px solid rgba(255,157,61,0.25);border-radius:8px;background:rgba(255,255,255,0.05);color:#ffddbb;font-size:14px;outline:none;box-sizing:border-box">
+            <button id="saveApiBtn" style="margin-top:8px;padding:8px 16px;border:1px solid rgba(255,157,61,0.3);border-radius:8px;background:rgba(255,157,61,0.1);color:#ffddbb;font-size:13px;cursor:pointer">Enregistrer & recharger</button>
+          </div>
+          <div class="dash-card">
             <h3>Affichage</h3>
             <label><input type="checkbox" id="settingTop" checked> Toujours au premier plan</label>
             <label><input type="checkbox" id="settingDesktopOrb"> Orb du bureau</label>
@@ -7963,6 +7969,24 @@ setTimeout(showWelcomeMsg, 100);
       if(sec) sec.classList.add('active');
     });
   });
+
+  // API URL setting
+  const settingApiUrl = document.getElementById('settingApiUrl');
+  const saveApiBtn = document.getElementById('saveApiBtn');
+  if(settingApiUrl){
+    settingApiUrl.value = localStorage.getItem('alex_api') || '';
+  }
+  if(saveApiBtn){
+    saveApiBtn.addEventListener('click', ()=>{
+      const url = settingApiUrl.value.trim();
+      if(url){
+        localStorage.setItem('alex_api', url.replace(/\/+$/,''));
+      } else {
+        localStorage.removeItem('alex_api');
+      }
+      location.reload();
+    });
+  }
 })();
 </script>
 <div id="toast" style="position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(15,18,28,0.95);border:1px solid rgba(255,157,61,0.3);border-radius:12px;padding:10px 20px;font-size:14px;color:#fff6ea;opacity:0;transition:all 0.3s;z-index:9999;pointer-events:none;backdrop-filter:blur(10px)"></div>
