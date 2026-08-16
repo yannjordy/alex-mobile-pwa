@@ -1390,3 +1390,9 @@ a { color: var(--accent); text-decoration: none; }
   .messages-container { padding: 24px; }
   .input-area { padding: 16px 24px; }
 }
+.table-wrap { overflow-x: auto; margin: 8px 0; -webkit-overflow-scrolling: touch; }
+.md-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.md-table th, .md-table td { padding: 6px 10px; border: 1px solid rgba(255,255,255,0.1); white-space: nowrap; }
+.md-table th { background: rgba(255,157,61,0.1); color: #ffc98c; font-weight: 600; }
+.md-table td { color: rgba(255,246,234,0.85); }
+.md-table tr:hover td { background: rgba(255,255,255,0.03); }

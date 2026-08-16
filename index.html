@@ -4711,7 +4711,7 @@ function toggleThink(btn){
   btn.textContent = box.classList.contains('collapsed') ? '+' : '−';
 }
 
-/* --- Petit rendu markdown (headings, listes, puces, gras) --- */
+/* --- Petit rendu markdown (headings, listes, puces, gras, tableaux) --- */
 function inlineMd(s){
   return s
     .replace(/`([^`]+)`/g, '<span class="inline-code">$1</span>')
@@ -4719,15 +4719,30 @@ function inlineMd(s){
     .replace(/\*+/g, '')
     .replace(/★([^★]+)★/g, '<span class="hl">$1</span>')
     .replace(/(^|[\s\(\)\[\]{}:;,!?\n])(\d+(?:[\.,]\d+)?)(?=[\s\(\)\[\]{}:;,!?\n]|$)/g, '$1<span class="num">$2</span>')
-    // Commandes système (en bleu)
     .replace(/\b(docker|kubectl|git|npm|yarn|pip|apt|systemctl|curl|wget|ssh|sudo|chmod|chown|mkdir|rm|cp|mv|ls|cat|grep|find|sed|awk|tar|zip|unzip)\b/g, '<span class="cmd">$1</span>')
-    // Fichiers et chemins (en violet)
     .replace(/(\/[\w./\-]+\.\w{1,5})\b/g, '<span class="filepath">$1</span>')
     .replace(/\b([\w./\-]+\.(js|ts|py|html|css|json|md|yml|yaml|toml|sh|bash|vue|jsx|tsx))\b/g, '<span class="filepath">$1</span>')
-    // Options et flags (en cyan)
     .replace(/(\s)(--?[\w-]+)(?=[\s=]|$)/g, '$1<span class="flag">$2</span>')
-    // Mots importants (en orange)
     .replace(/\b(install|create|delete|update|upgrade|build|deploy|run|start|stop|restart|enable|disable|add|remove|push|pull|clone|commit|merge|status)\b/gi, '<span class="keyword">$1</span>');
+}
+function renderTable(lines){
+  if(lines.length < 2) return null;
+  const parseRow = (line) => line.replace(/^\||\|$/g,'').split('|').map(c=>c.trim());
+  const headers = parseRow(lines[0]);
+  const sep = parseRow(lines[1]);
+  if(!sep.every(c => /^:?-+:?$/.test(c))) return null;
+  const aligns = sep.map(c => c.startsWith(':') && c.endsWith(':') ? 'center' : c.endsWith(':') ? 'right' : 'left');
+  const body = lines.slice(2).map(parseRow);
+  let html = '<div class="table-wrap"><table class="md-table"><thead><tr>';
+  headers.forEach((h,i) => html += `<th style="text-align:${aligns[i]||'left'}">${inlineMd(h)}</th>`);
+  html += '</tr></thead><tbody>';
+  body.forEach(row => {
+    html += '<tr>';
+    row.forEach((c,i) => html += `<td style="text-align:${aligns[i]||'left'}">${inlineMd(c)}</td>`);
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+  return html;
 }
 function renderMd(h){
   const out = [];
@@ -4739,18 +4754,32 @@ function renderMd(h){
       items = []; listType = null;
     }
   };
-  for(const raw of h.replace(/\r\n/g,'\n').split('\n')){
-    const t = raw.replace(/\s+$/,'');
-    if(!t.trim()){ flush(); continue; }
+  const allLines = h.replace(/\r\n/g,'\n').split('\n');
+  let i = 0;
+  while(i < allLines.length){
+    const t = allLines[i].replace(/\s+$/,'');
+    if(!t.trim()){ flush(); i++; continue; }
+    /* Détection de tableau markdown :|---|---| */
+    if(/^\|(.+\|)+\s*$/.test(t.trim()) && i+1 < allLines.length && /^\|[\s:\-|]+\|\s*$/.test(allLines[i+1].trim())){
+      flush();
+      const tblLines = [];
+      while(i < allLines.length && /^\|(.+\|)\s*$/.test(allLines[i].replace(/\s+$/,''))){
+        tblLines.push(allLines[i]); i++;
+      }
+      const tbl = renderTable(tblLines);
+      if(tbl) out.push(tbl);
+      continue;
+    }
     const hd = t.match(/^(#{1,4})\s+(.+)$/);
-    if(hd){ flush(); out.push(`<p class="md-p md-h${hd[1].length}">${inlineMd(hd[2].trim())}</p>`); continue; }
-    if(/^(-{3,}|\*{3,}|_{3,})\s*$/.test(t.trim())){ flush(); out.push('<hr class="md-hr">'); continue; }
+    if(hd){ flush(); out.push(`<p class="md-p md-h${hd[1].length}">${inlineMd(hd[2].trim())}</p>`); i++; continue; }
+    if(/^(-{3,}|\*{3,}|_{3,})\s*$/.test(t.trim())){ flush(); out.push('<hr class="md-hr">'); i++; continue; }
     const nu = t.match(/^[ \t]*(\*{0,2})\s*(\d+)[.)](\*{0,2})[ \t]+(.*)$/);
-    if(nu){ if(listType && listType!=='ol') flush(); if(!listType) listType='ol'; items.push(inlineMd(nu[4])); continue; }
+    if(nu){ if(listType && listType!=='ol') flush(); if(!listType) listType='ol'; items.push(inlineMd(nu[4])); i++; continue; }
     const bu = t.match(/^[ \t]*(?:[-*+•]|\*{1,2}[ \t]+)[ \t]+(.*)$/);
-    if(bu){ if(listType && listType!=='ul') flush(); if(!listType) listType='ul'; items.push(inlineMd(bu[1])); continue; }
+    if(bu){ if(listType && listType!=='ul') flush(); if(!listType) listType='ul'; items.push(inlineMd(bu[1])); i++; continue; }
     flush();
     out.push(`<p class="md-p">${inlineMd(t.trim())}</p>`);
+    i++;
   }
   flush();
   return out.join('');
