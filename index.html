@@ -5274,6 +5274,20 @@ async function handleAlexReply(userText, chatCid = ''){
             payload = parsed.text;
             throw new Error('__delta__');
           }
+          if(parsed.type === 'image'){
+            const loading = msgDiv.querySelector('.alex-loading');
+            if(loading) loading.style.display = 'none';
+            const url = parsed.url;
+            const widgetHtml = '<div class="widget-media" style="position:relative"><img src="' + url + '" loading="lazy" onclick="openMediaViewer(\'' + url.replace(/'/g,"\\'") + '\',\'image\')"><div class="media-bubble-actions"><button class="media-bubble-btn" onclick="event.stopPropagation();downloadImage(\'' + url.replace(/'/g,"\\'") + '\')" title="Enregistrer"><svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div></div>';
+            const existing = msgDiv.querySelector('.bubble');
+            if(existing){
+              existing.innerHTML += widgetHtml;
+            } else {
+              msgDiv.innerHTML = '<div class="bubble">' + widgetHtml + '</div>';
+            }
+            scrollToBottom();
+            continue;
+          }
           if(parsed.type === 'status'){
             setOrbState(parsed.state || 'thinking');
             if(parsed.state === 'operating'){

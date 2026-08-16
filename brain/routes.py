@@ -1135,7 +1135,18 @@ async def chat_opencode(req: ChatRequest):
             final_reply = _replace_tool_calls(reply_text, results)
             remaining = final_reply[len(reply_text):]
             if remaining:
-                yield f"data: {json.dumps({'type': 'delta', 'text': remaining})}\n\n"
+                # Send tool results with [IMG] tags as structured image event
+                import re as _re_img
+                img_matches = _re_img.findall(r'\[IMG\](https?:\/\/[^\[]+?)\[/IMG\]', remaining)
+                if img_matches:
+                    for imgUrl in img_matches:
+                        yield f"data: {json.dumps({'type': 'image', 'url': imgUrl})}\n\n"
+                    # Strip [IMG] tags from text reply
+                    clean_text = _re_img.sub(r'\[IMG\][^\[]*?\[/IMG\]', '', remaining).strip()
+                    if clean_text:
+                        yield f"data: {json.dumps({'type': 'delta', 'text': clean_text})}\n\n"
+                else:
+                    yield f"data: {json.dumps({'type': 'delta', 'text': remaining})}\n\n"
 
             _save_interaction(req.message, final_reply[:300])
         elif reply_text:

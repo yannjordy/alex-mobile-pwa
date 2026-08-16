@@ -379,6 +379,7 @@ async def recherche_image(requete: str) -> str:
         return "Que veux-tu que je cherche comme image ?"
     query = requete.strip()
     encoded = urllib.parse.quote_plus(query)
+    img_urls = []
 
     async with httpx.AsyncClient(verify=False, timeout=15) as client:
         # DuckDuckGo instant answer API
@@ -391,74 +392,78 @@ async def recherche_image(requete: str) -> str:
             resp.raise_for_status()
             data = resp.json()
             
-            # Image principale
             image_url = data.get("Image", "")
             if image_url and image_url.startswith("http"):
-                result = f"📸 Images pour « {query} » :\n[IMG]{image_url}[/IMG]"
-                
-                # Topics liés avec images
-                topics = data.get("RelatedTopics", [])
-                img_urls = []
-                for topic in topics:
-                    if isinstance(topic, dict):
-                        img = topic.get("Image", "")
-                        if img and img.startswith("http") and img not in img_urls:
-                            img_urls.append(img)
-                        # Sous-topics
-                        for sub in topic.get("Topics", []):
-                            if isinstance(sub, dict):
-                                sub_img = sub.get("Image", "")
-                                if sub_img and sub_img.startswith("http") and sub_img not in img_urls:
-                                    img_urls.append(sub_img)
-                
-                if img_urls:
-                    for u in img_urls[:5]:
-                        result += f"\n[IMG]{u}[/IMG]"
-                
-                return result.strip()
+                img_urls.append(image_url)
+            
+            topics = data.get("RelatedTopics", [])
+            for topic in topics:
+                if isinstance(topic, dict):
+                    img = topic.get("Image", "")
+                    if img and img.startswith("http") and img not in img_urls:
+                        img_urls.append(img)
+                    for sub in topic.get("Topics", []):
+                        if isinstance(sub, dict):
+                            sub_img = sub.get("Image", "")
+                            if sub_img and sub_img.startswith("http") and sub_img not in img_urls:
+                                img_urls.append(sub_img)
         except Exception:
             pass
 
-        # Fallback: Openverse (avec timeout plus long)
-        try:
-            resp = await client.get(
-                f"https://api.openverse.org/v1/images/?q={encoded}&page_size=8",
-                headers={"User-Agent": "AlexAssistant/1.0"},
-                timeout=20
-            )
-            resp.raise_for_status()
-            results = resp.json().get("results", [])
-            if results:
-                valid = []
+        # Fallback: DuckDuckGo HTML image search
+        if len(img_urls) < 3:
+            try:
+                resp = await client.get(
+                    f"https://duckduckgo.com/?q={encoded}&iax=images&ia=images",
+                    headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"},
+                    timeout=10
+                )
+                # Get the vqd token for image search
+                import re
+                vqd_match = re.search(r'vqd=["\']([^"\']+)', resp.text)
+                if vqd_match:
+                    vqd = vqd_match.group(1)
+                    img_resp = await client.get(
+                        f"https://duckduckgo.com/i.js?l=us-en&o=json&q={encoded}&vqd={vqd}&f=,,,,,&p=1",
+                        headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"},
+                        timeout=10
+                    )
+                    if img_resp.status_code == 200:
+                        try:
+                            img_data = img_resp.json()
+                            for r in img_data.get("results", [])[:6]:
+                                u = r.get("image") or r.get("thumb") or ""
+                                if u and u.startswith("http") and u not in img_urls:
+                                    img_urls.append(u)
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+
+        # Fallback: Openverse
+        if len(img_urls) < 3:
+            try:
+                resp = await client.get(
+                    f"https://api.openverse.org/v1/images/?q={encoded}&page_size=6",
+                    headers={"User-Agent": "AlexAssistant/1.0"},
+                    timeout=15
+                )
+                resp.raise_for_status()
+                results = resp.json().get("results", [])
                 for r in results:
                     url = r.get("url")
-                    width = r.get("width", 0)
-                    height = r.get("height", 0)
-                    if width and height and (width < 200 or height < 200):
-                        continue
-                    if url:
-                        try:
-                            hr = await client.head(url, timeout=5, follow_redirects=True)
-                            if hr.status_code == 200 and "image" in hr.headers.get("content-type", ""):
-                                valid.append(url)
-                                if len(valid) >= 4:
-                                    break
-                        except Exception:
-                            continue
-                if valid:
-                    result = f"📸 Images pour « {query} » :\n"
-                    for u in valid:
-                        result += f"[IMG]{u}[/IMG]\n"
-                    return result.strip()
-        except Exception:
-            pass
+                    if url and url.startswith("http") and url not in img_urls:
+                        img_urls.append(url)
+                        if len(img_urls) >= 6:
+                            break
+            except Exception:
+                pass
 
-        # Fallback: recherche web classique
-        try:
-            text_result = await recherche_web(f"{query} image")
-            return text_result
-        except Exception:
-            pass
+    if img_urls:
+        result = f"📸 Images pour « {query} » :\n"
+        for u in img_urls[:6]:
+            result += f"[IMG]{u}[/IMG]\n"
+        return result.strip()
 
     return f"Je n'ai pas trouvé d'images pour « {query} »."
 
