@@ -3617,12 +3617,6 @@ async function analyzeDocument(content, filename){
     }
   }catch(e){}
 }
-    const fileLabel = isPdf ? 'PDF' : isDoc ? 'Document' : isAudio ? 'Audio' : isVideo ? 'Vidéo' : 'Fichier';
-    const html = '<div class="file-widget"><div class="file-icon" style="background:'+bgColor+'">'+iconSvg+'</div><div class="file-info"><div class="file-name">'+escHtml(file.name)+'</div><div class="file-meta">'+fileLabel+' · '+formatFileSize(file.size)+'</div></div></div>';
-    addMsg('user', html, 'has-file');
-  };
-  reader.readAsArrayBuffer(file);
-}
 async function analyzeImage(dataUrl){
   try{
     addMsg('alex', '<div class="alex-loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>');
