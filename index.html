@@ -7851,7 +7851,7 @@ let currentSliderPage = 0;
 const sliderWrap = document.getElementById('sliderWrap');
 const sliderPages = document.getElementById('sliderPages');
 const sliderDots = document.querySelectorAll('.slider-dot');
-let touchStartX = 0, touchStartY = 0, isSwiping = false;
+let touchStartX = 0, touchStartY = 0, isSwiping = false, isSliderBlocked = false;
 
 function goToPage(idx) {
   currentSliderPage = idx;
@@ -7867,10 +7867,13 @@ sliderWrap.addEventListener('touchstart', e => {
   touchStartX = e.touches[0].clientX;
   touchStartY = e.touches[0].clientY;
   isSwiping = false;
+  const el = e.target.closest('.table-wrap, .bubble, pre, code, .widget-media, .file-widget, textarea, input');
+  isSliderBlocked = !!el;
   sliderPages.classList.add('no-anim');
 }, { passive: true });
 
 sliderWrap.addEventListener('touchmove', e => {
+  if(isSliderBlocked) return;
   const dx = e.touches[0].clientX - touchStartX;
   const dy = e.touches[0].clientY - touchStartY;
   if (!isSwiping && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) isSwiping = true;
@@ -7883,6 +7886,7 @@ sliderWrap.addEventListener('touchmove', e => {
 
 sliderWrap.addEventListener('touchend', e => {
   sliderPages.classList.remove('no-anim');
+  if(isSliderBlocked) return;
   const dx = e.changedTouches[0].clientX - touchStartX;
   if (Math.abs(dx) > 50) {
     if (dx < 0 && currentSliderPage < 1) goToPage(currentSliderPage + 1);
