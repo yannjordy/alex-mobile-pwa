@@ -3597,7 +3597,7 @@ function sendFileAttachment(file){
     const html = '<div class="file-widget"><div class="file-icon" style="background:'+bgColor+'">'+iconSvg+'</div><div class="file-info"><div class="file-name">'+escHtml(file.name)+'</div><div class="file-meta">'+fileLabel+' · '+formatFileSize(file.size)+'</div></div></div>';
     addMsg('user', html, 'has-file');
   };
-  if(isPdf || isDoc) reader.readAsArrayBuffer(file); else reader.readAsArrayBuffer(file);
+  reader.readAsArrayBuffer(file);
 }
 async function analyzeDocument(content, filename){
   try{
