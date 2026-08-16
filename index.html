@@ -4745,7 +4745,7 @@ function renderAlexBubble(raw, isFinal){
   const penseeRegex = /\[PENS[ÉE]E?\]/i;
   const preIdx = raw.search(penseeRegex);
   if(preIdx === -1){
-    return renderMediaContent(renderMd(raw));
+    return renderMd(renderMediaContent(raw));
   }
   if(preIdx > 0) raw = raw.slice(preIdx);
   const thinks = [];
@@ -5288,7 +5288,7 @@ async function handleAlexReply(userText, chatCid = ''){
           if(parsed.state){ setOrbState(parsed.state); continue; }
           if(parsed.shape){ showShape(parsed.shape, 3000); continue; }
           if(parsed.reply && parsed.source?.startsWith('skill')){
-            msgDiv.innerHTML = renderMediaContent(renderMd(parsed.reply));
+            msgDiv.innerHTML = renderMd(renderMediaContent(parsed.reply));
             fullReply = parsed.reply;
             isSkill = true;
             break;
@@ -5323,7 +5323,7 @@ async function handleAlexReply(userText, chatCid = ''){
             
             const resultDiv = document.createElement('div');
             resultDiv.className = 'alex-reply-text';
-            resultDiv.innerHTML = renderMediaContent(renderMd(parsed.reply));
+            resultDiv.innerHTML = renderMd(renderMediaContent(parsed.reply));
             msgDiv.appendChild(resultDiv);
             
             fullReply = parsed.reply;
