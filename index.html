@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Alex v3</title>
 <meta name="description" content="Alex - Assistant personnel intelligent">
 <meta name="theme-color" content="#0f121c">
@@ -29,7 +29,7 @@
   *{ box-sizing:border-box; }
   html,body{
     margin:0; padding:0; width:100%; height:100%;
-    background: transparent;
+    background: #0f121c;
     overflow:hidden;
     font-family:'Cormorant Garamond', 'Segoe UI', system-ui, serif;
     color:#fff6ea;
@@ -45,6 +45,7 @@
     overflow:hidden;
     position:relative;
     transition: border-radius .25s ease;
+    padding-top: env(safe-area-inset-top);
   }
 
   /* --- Barre de titre (zone de drag) --- */
