@@ -394,7 +394,7 @@ async def recherche_image(requete: str) -> str:
             # Image principale
             image_url = data.get("Image", "")
             if image_url and image_url.startswith("http"):
-                result = f"📸 Image pour « {query} » :\n{image_url}"
+                result = f"📸 Images pour « {query} » :\n[IMG]{image_url}[/IMG]"
                 
                 # Topics liés avec images
                 topics = data.get("RelatedTopics", [])
@@ -412,9 +412,8 @@ async def recherche_image(requete: str) -> str:
                                     img_urls.append(sub_img)
                 
                 if img_urls:
-                    result += "\n"
-                    for u in img_urls[:4]:
-                        result += f"{u}\n"
+                    for u in img_urls[:5]:
+                        result += f"\n[IMG]{u}[/IMG]"
                 
                 return result.strip()
         except Exception:
@@ -449,7 +448,7 @@ async def recherche_image(requete: str) -> str:
                 if valid:
                     result = f"📸 Images pour « {query} » :\n"
                     for u in valid:
-                        result += f"{u}\n"
+                        result += f"[IMG]{u}[/IMG]\n"
                     return result.strip()
         except Exception:
             pass

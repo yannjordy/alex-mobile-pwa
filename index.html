@@ -4515,6 +4515,11 @@ const VIMEO_RE = /(?:https?:\/\/)?(?:www\.)?vimeo\.com\/(\d+)/;
 
 function renderMediaContent(text){
   if(!text) return '';
+  /* --- [IMG]url[/IMG] → widget image direct --- */
+  text = text.replace(/\[IMG\](https?:\/\/[^\[]+?)\[\/IMG\]/gi, (m, url) => {
+    const safeUrl = url.replace(/"/g, '%22').replace(/'/g, '%27');
+    return '<div class="widget-media" style="position:relative"><img src="' + safeUrl + '" loading="lazy" onclick="openMediaViewer(\'' + url.replace(/'/g,"\\'") + '\',\'image\')"><div class="media-bubble-actions"><button class="media-bubble-btn" onclick="event.stopPropagation();downloadImage(\'' + url.replace(/'/g,"\\'") + '\')" title="Enregistrer"><svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button class="media-bubble-btn" onclick="event.stopPropagation();setWallpaper(\'' + url.replace(/'/g,"\\'") + '\')" title="Fond d\'écran"><svg width="12" height="12" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/><path d="M21 15l-5-5L5 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div></div>';
+  });
   /* --- Logos intégrations : détecter les mentions d'apps --- */
   const apps = _detectApps(text);
   let logoPrefix = '';
@@ -4584,7 +4589,7 @@ function renderMediaContent(text){
         embeds.push(`<a href="${escapeHtml(m)}" target="_blank" rel="noopener" style="font-size:0.85em;color:#8ab4f8">▶ Ouvrir sur Vimeo</a>`);
       }
     } else {
-      embeds.push(`<a href="#" onclick="openMediaViewer('${escapeHtml(m)}','iframe');return false" style="font-size:0.85em;color:#8ab4f8">🌐 Ouvrir la page</a>`);
+      embeds.push(`<div class="widget-media widget-webpage" onclick="openMediaViewer('${escapeHtml(m)}','iframe')" style="cursor:pointer;position:relative;overflow:hidden;border-radius:12px;border:1px solid rgba(74,144,217,0.25);background:rgba(74,144,217,0.06);padding:14px 16px;display:flex;align-items:center;gap:12px"><div style="width:40px;height:40px;border-radius:10px;background:rgba(74,144,217,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#4A90D9" stroke-width="1.8"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" stroke="#4A90D9" stroke-width="1.8"/></svg></div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:#8ab4f8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(m.length > 60 ? m.slice(0,60)+'…' : m)}</div><div style="font-size:11px;color:rgba(255,246,234,0.4);margin-top:2px">🌐 Ouvrir la page</div></div><svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;opacity:0.5"><path d="M5 12h14M12 5l7 7-7 7" stroke="#8ab4f8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`);
     }
     return `\x00EMBED${idx}\x00`;
   });
