@@ -3568,7 +3568,7 @@ function handleFiles(files){
   for(const f of files) pendingFiles.push(f);
   updateFilePreview();
 }
-function sendFileAttachment(file){
+function sendFileAttachment(file, userQuestion){
   const reader = new FileReader();
   reader.onload = ()=>{
     const ext = file.name.split('.').pop().toLowerCase();
@@ -3582,7 +3582,7 @@ function sendFileAttachment(file){
       const b64 = btoa(new Uint8Array(reader.result).reduce((d,b)=>d+String.fromCharCode(b),''));
       const dataUrl = 'data:'+file.type+';base64,'+b64;
       addMsg('user', '<div class="widget-media"><img src="'+dataUrl+'" alt="'+escHtml(file.name)+'" onclick="openMediaViewer(this.src,\'image\')"></div>', 'has-file');
-      analyzeImage(dataUrl);
+      analyzeImage(dataUrl, userQuestion);
       return;
     } else if(isPdf || isDoc){
       iconSvg = isPdf
@@ -3593,7 +3593,7 @@ function sendFileAttachment(file){
       const html = '<div class="file-widget"><div class="file-icon" style="background:'+bgColor+'">'+iconSvg+'</div><div class="file-info"><div class="file-name">'+escHtml(file.name)+'</div><div class="file-meta">'+fileLabel+' · '+formatFileSize(file.size)+'</div></div></div>';
       addMsg('user', html, 'has-file');
       const textContent = new TextDecoder('utf-8').decode(reader.result);
-      analyzeDocument(textContent, file.name);
+      analyzeDocument(textContent, file.name, userQuestion);
       return;
     } else if(isAudio){
       iconSvg='<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M9 18V5l12-2v13" stroke="#1DB954" stroke-width="1.8"/><circle cx="6" cy="18" r="3" stroke="#1DB954" stroke-width="1.8"/><circle cx="18" cy="16" r="3" stroke="#1DB954" stroke-width="1.8"/></svg>';
@@ -3611,18 +3611,18 @@ function sendFileAttachment(file){
   };
   reader.readAsArrayBuffer(file);
 }
-async function analyzeDocument(content, filename){
+async function analyzeDocument(content, filename, userQuestion){
   try{
     addMsg('alex', '<div class="alex-loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>');
     scrollToBottom();
-    const resp = await fetch(API_URL+'/vision/analyze-document',{
+    const resp = await fetch(API+'/vision/analyze-document',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({content:content, filename:filename, question:'Résume et analyse ce document en français.'})
+      body:JSON.stringify({content:content, filename:filename, question: userQuestion || 'Résume et analyse ce document en français.'})
     });
     const loadingEl = chatArea.querySelector('.msg.alex:last-child .alex-loading');
     if(loadingEl) loadingEl.closest('.msg').remove();
-    if(!resp.ok) return;
+    if(!resp.ok){ addMsg('alex', '❌ Erreur lors de l\'analyse du document.'); scrollToBottom(); return; }
     const data = await resp.json();
     if(data.reply){
       const words = data.reply.split(' ');
@@ -3639,20 +3639,24 @@ async function analyzeDocument(content, filename){
       }
       addWord();
     }
-  }catch(e){}
+  }catch(e){
+    const loadingEl = chatArea.querySelector('.msg.alex:last-child .alex-loading');
+    if(loadingEl) loadingEl.closest('.msg').remove();
+    addMsg('alex', '❌ Impossible d\'analyser le document — le serveur est-il actif ?');
+    scrollToBottom();
+  }
 }
-async function analyzeImage(dataUrl){
   try{
     addMsg('alex', '<div class="alex-loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>');
     scrollToBottom();
-    const resp = await fetch(API_URL+'/vision/analyze-image',{
+    const resp = await fetch(API+'/vision/analyze-image',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({image:dataUrl, question:'Décris cette image en français.'})
+      body:JSON.stringify({image:dataUrl, question: userQuestion || 'Décris cette image en français.'})
     });
     const loadingEl = chatArea.querySelector('.msg.alex:last-child .alex-loading');
     if(loadingEl) loadingEl.closest('.msg').remove();
-    if(!resp.ok) return;
+    if(!resp.ok){ addMsg('alex', '❌ Erreur lors de l\'analyse de l\'image.'); scrollToBottom(); return; }
     const data = await resp.json();
     if(data.reply){
       const words = data.reply.split(' ');
@@ -3669,7 +3673,12 @@ async function analyzeImage(dataUrl){
       }
       addWord();
     }
-  }catch(e){}
+  }catch(e){
+    const loadingEl = chatArea.querySelector('.msg.alex:last-child .alex-loading');
+    if(loadingEl) loadingEl.closest('.msg').remove();
+    addMsg('alex', '❌ Impossible d\'analyser l\'image — le serveur est-il actif ?');
+    scrollToBottom();
+  }
 }
 function escHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function formatFileSize(bytes){
@@ -5664,14 +5673,14 @@ micActionBtn.addEventListener('click', ()=>{
     const w = document.getElementById('welcomeMsg');
     if(w) w.remove();
     if(hasFiles){
-      for(const f of pendingFiles) sendFileAttachment(f);
+      for(const f of pendingFiles) sendFileAttachment(f, text);
       pendingFiles = [];
       updateFilePreview();
     }
     if(text){
       sendMessage(text, 'user');
       textInput.value = '';
-      handleAlexReply(text);
+      if(!hasFiles) handleAlexReply(text);
     }
     updateMicIcon();
     scheduleAutoCollapse();
