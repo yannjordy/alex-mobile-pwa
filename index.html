@@ -3596,15 +3596,19 @@ function sendFileAttachment(file){
 }
 async function analyzeImage(dataUrl){
   try{
+    addMsg('alex', '<div class="alex-loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>');
+    scrollToBottom();
     const resp = await fetch(API_URL+'/vision/analyze-image',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({image:dataUrl, question:'Décris cette image en français.'})
     });
+    const loadingEl = chatArea.querySelector('.msg.alex:last-child .alex-loading');
+    if(loadingEl) loadingEl.closest('.msg').remove();
     if(!resp.ok) return;
     const data = await resp.json();
     if(data.reply){
-      addMsg('alex', formatResponse(data.reply));
+      addMsg('alex', data.reply);
       scrollToBottom();
     }
   }catch(e){}
