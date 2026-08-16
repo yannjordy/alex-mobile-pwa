@@ -150,6 +150,13 @@
     overflow-x:auto;
     -webkit-overflow-scrolling:touch;
   }
+  .table-wrap{overflow-x:auto;margin:8px 0;-webkit-overflow-scrolling:touch;border:1px solid rgba(255,157,61,0.15);border-radius:8px;background:rgba(0,0,0,0.2)}
+  .md-table{width:100%;border-collapse:collapse;font-size:13px;min-width:100%}
+  .md-table th,.md-table td{padding:8px 12px;border:1px solid rgba(255,157,61,0.25);white-space:nowrap}
+  .md-table th{background:rgba(255,157,61,0.12);color:#ffc98c;font-weight:600;border-bottom:2px solid rgba(255,157,61,0.3)}
+  .md-table td{color:rgba(255,246,234,0.85)}
+  .md-table tr:nth-child(even) td{background:rgba(255,255,255,0.02)}
+  .md-table tr:hover td{background:rgba(255,157,61,0.06)}
   .inline-code{background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:4px;font-size:13px;font-family:monospace}
   .bold{font-weight:700}
   .hl{color:#ffc98c}
@@ -4737,7 +4744,7 @@ function renderAlexBubble(raw, isFinal){
   const penseeRegex = /\[PENS[ÉE]E?\]/i;
   const preIdx = raw.search(penseeRegex);
   if(preIdx === -1){
-    return renderMediaContent(raw);
+    return renderMediaContent(renderMd(raw));
   }
   if(preIdx > 0) raw = raw.slice(preIdx);
   const thinks = [];
@@ -5280,7 +5287,7 @@ async function handleAlexReply(userText, chatCid = ''){
           if(parsed.state){ setOrbState(parsed.state); continue; }
           if(parsed.shape){ showShape(parsed.shape, 3000); continue; }
           if(parsed.reply && parsed.source?.startsWith('skill')){
-            msgDiv.innerHTML = renderMediaContent(parsed.reply);
+            msgDiv.innerHTML = renderMediaContent(renderMd(parsed.reply));
             fullReply = parsed.reply;
             isSkill = true;
             break;
@@ -5315,7 +5322,7 @@ async function handleAlexReply(userText, chatCid = ''){
             
             const resultDiv = document.createElement('div');
             resultDiv.className = 'alex-reply-text';
-            resultDiv.innerHTML = renderMediaContent(parsed.reply);
+            resultDiv.innerHTML = renderMediaContent(renderMd(parsed.reply));
             msgDiv.appendChild(resultDiv);
             
             fullReply = parsed.reply;
