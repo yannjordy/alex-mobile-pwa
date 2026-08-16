@@ -3,3 +3,6 @@ node_modules/
 *.log
 .DS_Store
 Thumbs.db
+brain/__pycache__/
+brain/**/__pycache__/
+brain/alex_memory.db
