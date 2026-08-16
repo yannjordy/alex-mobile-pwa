@@ -793,19 +793,36 @@ async def vision_stop():
 @app.post("/vision/analyze-image")
 async def analyze_user_image(req: ImageAnalysisRequest):
     """Analyse une image envoyée par l'utilisateur via opencode free models."""
-    from .llm import ask_opencode, _model_body, _ensure_session, _get_client
+    from .llm import _model_body, _ensure_session, _get_client
     from .config import OPENCODE_API_URL
 
     try:
-        prompt = f"Tu es Alex, l'assistante de {USER_NAME}. Tu analyses les images qu'on t'envoie. Réponds en français, sois concise et utile.\n\nImage en base64 (format data URL) :\n{req.image}\n\nQuestion : {req.question}"
-
         client = await _get_client()
         session_id = await _ensure_session("mimo-v2.5-free")
+
+        # Parse base64 data URL to extract media type and data
+        image_data_url = req.image
+        media_type = "image/png"
+        base64_data = ""
+        if image_data_url.startswith("data:"):
+            parts = image_data_url.split(",", 1)
+            if len(parts) == 2:
+                header = parts[0]  # data:image/png;base64
+                media_type = header.split(";")[0].split(":")[1] if ":" in header else "image/png"
+                base64_data = parts[1]
+        else:
+            base64_data = image_data_url
+
+        # Build message parts with image content
+        parts = [
+            {"type": "image", "mediaType": media_type, "data": base64_data},
+            {"type": "text", "text": f"Tu es Alex, l'assistante de {USER_NAME}. Analyse cette image et réponds en français. Sois concise et utile.\n\nQuestion : {req.question}"}
+        ]
 
         resp = await client.post(
             f"{OPENCODE_API_URL}/session/{session_id}/prompt_async",
             json={
-                "parts": [{"type": "text", "text": prompt}],
+                "parts": parts,
                 "model": _model_body("mimo-v2.5-free"),
             },
         )
@@ -1117,8 +1134,10 @@ async def chat_opencode(req: ChatRequest):
 
         if tool_calls:
             results = {}
+            tool_names = []
             for tc in tool_calls:
                 tool_name = tc["tool"]
+                tool_names.append(tool_name)
                 params = tc["params"]
                 try:
                     result = await tools_registry.execute(tool_name, params)
@@ -1145,6 +1164,20 @@ async def chat_opencode(req: ChatRequest):
                     clean_text = _re_img.sub(r'\[IMG\][^\[]*?\[/IMG\]', '', remaining).strip()
                     if clean_text:
                         yield f"data: {json.dumps({'type': 'delta', 'text': clean_text})}\n\n"
+                elif tool_names and any(t in ('recherche_image','recherche_video') for t in tool_names):
+                    # Tool result has URLs without [IMG] tags — extract bare image URLs
+                    bare_urls = _re_img.findall(r'(https?://[^\s<>"]+\.(?:jpg|jpeg|png|gif|webp|svg|bmp)(?:\?[^\s<>"]*)?)', remaining)
+                    if bare_urls:
+                        for imgUrl in bare_urls:
+                            yield f"data: {json.dumps({'type': 'image', 'url': imgUrl})}\n\n"
+                        clean_text = _re_img.sub(r'https?://[^\s<>"]+\.(?:jpg|jpeg|png|gif|webp|svg|bmp)(?:\?[^\s<>"]*)?', '', remaining).strip()
+                        # Clean up leftover lines that are just descriptions
+                        clean_text = _re_img.sub(r'📸\s*Images?\s+pour\s+«[^»]*»\s*:?\s*', '', clean_text).strip()
+                        clean_text = _re_img.sub(r'^\s*[-•]\s*$', '', clean_text, flags=_re_img.MULTILINE).strip()
+                        if clean_text:
+                            yield f"data: {json.dumps({'type': 'delta', 'text': clean_text})}\n\n"
+                    else:
+                        yield f"data: {json.dumps({'type': 'delta', 'text': remaining})}\n\n"
                 else:
                     yield f"data: {json.dumps({'type': 'delta', 'text': remaining})}\n\n"
 
