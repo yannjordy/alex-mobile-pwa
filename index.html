@@ -3568,7 +3568,9 @@ function sendFileAttachment(file){
     let iconSvg='', bgColor='';
     if(isImage){
       const b64 = btoa(new Uint8Array(reader.result).reduce((d,b)=>d+String.fromCharCode(b),''));
-      addMsg('user', '<div class="widget-media"><img src="data:'+file.type+';base64,'+b64+'" alt="'+escHtml(file.name)+'" onclick="openMediaViewer(this.src,\'image\')"></div><div class="file-meta">'+escHtml(file.name)+'</div>', 'has-file');
+      const dataUrl = 'data:'+file.type+';base64,'+b64;
+      addMsg('user', '<div class="widget-media"><img src="'+dataUrl+'" alt="'+escHtml(file.name)+'" onclick="openMediaViewer(this.src,\'image\')"></div><div class="file-meta">'+escHtml(file.name)+'</div>', 'has-file');
+      analyzeImage(dataUrl);
       return;
     } else if(isPdf){
       iconSvg='<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="#ef4444" stroke-width="1.8"/><path d="M8 13h8M8 17h5" stroke="#ef4444" stroke-width="1.5" stroke-linecap="round"/></svg>';
@@ -3591,6 +3593,21 @@ function sendFileAttachment(file){
     addMsg('user', html, 'has-file');
   };
   reader.readAsArrayBuffer(file);
+}
+async function analyzeImage(dataUrl){
+  try{
+    const resp = await fetch(API_URL+'/vision/analyze-image',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({image:dataUrl, question:'Décris cette image en français.'})
+    });
+    if(!resp.ok) return;
+    const data = await resp.json();
+    if(data.reply){
+      addMsg('alex', formatResponse(data.reply));
+      scrollToBottom();
+    }
+  }catch(e){}
 }
 function escHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function formatFileSize(bytes){
