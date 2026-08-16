@@ -1392,9 +1392,10 @@ a { color: var(--accent); text-decoration: none; }
   .messages-container { padding: 24px; }
   .input-area { padding: 16px 24px; }
 }
-.table-wrap { overflow-x: auto; margin: 8px 0; -webkit-overflow-scrolling: touch; }
-.md-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.md-table th, .md-table td { padding: 6px 10px; border: 1px solid rgba(255,255,255,0.1); white-space: nowrap; }
-.md-table th { background: rgba(255,157,61,0.1); color: #ffc98c; font-weight: 600; }
+.table-wrap { overflow-x: auto; margin: 8px 0; -webkit-overflow-scrolling: touch; border: 1px solid rgba(255,157,61,0.15); border-radius: 8px; background: rgba(0,0,0,0.2); }
+.md-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 100%; }
+.md-table th, .md-table td { padding: 8px 12px; border: 1px solid rgba(255,157,61,0.25); white-space: nowrap; }
+.md-table th { background: rgba(255,157,61,0.12); color: #ffc98c; font-weight: 600; border-bottom: 2px solid rgba(255,157,61,0.3); }
 .md-table td { color: rgba(255,246,234,0.85); }
-.md-table tr:hover td { background: rgba(255,255,255,0.03); }
+.md-table tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+.md-table tr:hover td { background: rgba(255,157,61,0.06); }
