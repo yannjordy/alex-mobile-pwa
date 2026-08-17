@@ -2978,6 +2978,8 @@ let recognition;
 let listenAlways = true;
 let isSpeaking = false;
 let isStreaming = false;
+let pendingMessages = [];
+let lastUserMessage = '';
 let micCooldown = false;
 
 // STT côté serveur (Electron n'a pas le Web Speech API)
@@ -4061,6 +4063,27 @@ function setSpeaking(val){
 function setStreaming(val){
   isStreaming = val;
   if(stopBtn) stopBtn.classList.toggle('visible', val || isSpeaking);
+  // Mettre à jour le bouton stop dans la bulle
+  const bubbleStop = chatArea.querySelector('.bubble-stop-btn');
+  if(bubbleStop) bubbleStop.style.display = val ? 'flex' : 'none';
+  // Traiter la file d'attente
+  if(!val && pendingMessages.length > 0){
+    const next = pendingMessages.shift();
+    updateQueueIndicator();
+    setTimeout(()=> handleAlexReply(next), 300);
+  }
+}
+function updateQueueIndicator(){
+  const existing = document.getElementById('queueIndicator');
+  if(existing) existing.remove();
+  if(pendingMessages.length > 0){
+    const ind = document.createElement('div');
+    ind.id = 'queueIndicator';
+    ind.style.cssText = 'text-align:center;padding:6px;font-size:11px;color:rgba(255,246,234,0.35);animation:widgetIn .3s ease-out;';
+    ind.textContent = `📋 ${pendingMessages.length} message(s) en attente...`;
+    chatArea.appendChild(ind);
+    scrollToBottom();
+  }
 }
 function stopAlex(){
   speechQueue = [];
@@ -4078,6 +4101,9 @@ function stopAlex(){
   }
   setStreaming(false);
   setOrbState('idle');
+  // Nettoyer le bouton stop dans la bulle
+  const bubbleStop = chatArea.querySelector('.bubble-stop-btn');
+  if(bubbleStop) bubbleStop.style.display = 'none';
   if(listenAlways && micActive){
     startServerSTT();
   }
@@ -5311,7 +5337,10 @@ async function handleAlexReply(userText, chatCid = ''){
   if(userText.trim().endsWith('?')) showShape('question', 800);
   const msgDiv = document.createElement('div');
   msgDiv.className = 'msg alex';
-  msgDiv.innerHTML = '<div class="alex-task-status"><span class="alex-task-spinner"></span><span class="alex-task-text">Alex reflechit...</span></div>';
+  msgDiv.innerHTML = `<div style="position:relative">
+    <div class="alex-task-status"><span class="alex-task-spinner"></span><span class="alex-task-text">Alex réfléchit...</span></div>
+    <button class="bubble-stop-btn" onclick="stopAlex()" title="Arrêter" style="position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;border:1px solid rgba(255,80,80,0.25);background:rgba(255,80,80,0.08);color:rgba(255,150,150,0.7);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;z-index:5;transition:all .2s" onmouseover="this.style.background='rgba(255,80,80,0.2)';this.style.borderColor='rgba(255,80,80,0.5)'" onmouseout="this.style.background='rgba(255,80,80,0.08)';this.style.borderColor='rgba(255,80,80,0.25)'">■</button>
+  </div>`;
   chatArea.appendChild(msgDiv);
   scrollToBottom();
   let fullReply = '';
@@ -5909,12 +5938,27 @@ micActionBtn.addEventListener('click', ()=>{
   if(text || hasFiles){
     const w = document.getElementById('welcomeMsg');
     if(w) w.remove();
+    // Si Alex est en train de répondre, mettre en file d'attente
+    if(isStreaming && text){
+      pendingMessages.push(text);
+      textInput.value = '';
+      updateMicIcon();
+      updateQueueIndicator();
+      // Afficher un mini message dans le chat
+      const queueMsg = document.createElement('div');
+      queueMsg.className = 'msg user';
+      queueMsg.innerHTML = '<div class="bubble" style="opacity:0.5;font-size:13px;font-style:italic">' + escHtml(text) + ' ⏳</div>';
+      chatArea.appendChild(queueMsg);
+      scrollToBottom();
+      return;
+    }
     if(hasFiles){
       for(const f of pendingFiles) sendFileAttachment(f, text);
       pendingFiles = [];
       updateFilePreview();
     }
     if(text){
+      lastUserMessage = text;
       sendMessage(text, 'user');
       textInput.value = '';
       if(!hasFiles) handleAlexReply(text);
