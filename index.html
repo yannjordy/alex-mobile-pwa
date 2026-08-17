@@ -1651,11 +1651,35 @@
   .code-action:hover{ background:rgba(255,157,61,0.25); }
   .code-action.save{ border-color:rgba(120,180,255,0.35); background:rgba(120,180,255,0.1); color:#8db8ff; }
   .code-action.save:hover{ background:rgba(120,180,255,0.22); }
+  .code-action.preview{ border-color:rgba(180,120,255,0.35); background:rgba(180,120,255,0.1); color:#c9a0ff; }
+  .code-action.preview:hover{ background:rgba(180,120,255,0.25); }
   .code-action-status{
     font-size:10px; color:#888; word-break:break-all; line-height:1.4;
   }
   .code-action-status.ok{ color:#7bd88a; }
   .code-action-status.err{ color:#ff8f8f; }
+  .code-output-panel{
+    border:1px solid rgba(180,120,255,0.2); border-radius:10px; margin-top:8px;
+    overflow:hidden; background:rgba(0,0,0,0.3);
+  }
+  .code-output-head{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:6px 10px; font-size:11px; font-weight:700; color:#c9a0ff;
+    background:rgba(180,120,255,0.08); border-bottom:1px solid rgba(180,120,255,0.15);
+  }
+  .code-output-content{ padding:10px; max-height:400px; overflow-y:auto; }
+  .code-output-content::-webkit-scrollbar{ width:5px; }
+  .code-output-content::-webkit-scrollbar-thumb{ background:rgba(180,120,255,0.25); border-radius:3px; }
+  .code-output-section{ margin-bottom:10px; }
+  .code-output-section:last-child{ margin-bottom:0; }
+  .code-output-label{ font-size:10px; font-weight:700; color:#aaa; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px; }
+  .code-output-pre{
+    background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.06); border-radius:6px;
+    padding:8px 10px; font-size:11px; line-height:1.5; color:#e0d6c8;
+    font-family:'JetBrains Mono','Fira Code',monospace; white-space:pre-wrap; word-break:break-all;
+    max-height:250px; overflow-y:auto; margin:0;
+  }
+  .code-output-pre.output{ color:#7bd88a; border-color:rgba(76,175,80,0.15); }
   .code-preview-panel{
     margin:6px 10px 10px; border:1px solid rgba(255,157,61,0.2);
     border-radius:8px; overflow:hidden; background:#fff;
@@ -5488,6 +5512,7 @@ async function handleAlexReply(userText, chatCid = ''){
             } else {
               msgDiv.innerHTML = '<div class="bubble">' + widgetHtml + '</div>';
             }
+            try{ addMedia('image', url, parsed.title || ''); }catch(e){}
             scrollToBottom();
             continue;
           }
@@ -6236,12 +6261,17 @@ function renderCodeModal(){
       <div class="code-event-header"><span class="badge ${ev.ok?'ok':'err'}">${ev.ok?'✓':'✗'}</span><span class="path">${escapeHtml(ev.path)}</span>${badge}<span class="time">${delta} · ${t}</span></div>
       ${renderCodeEditor(ev)}
       <div class="code-event-actions">
+        ${isExec ? `<button class="code-action preview" id="${id}-preview">👁 Visualiser</button>` : ''}
         ${isExec ? `<button class="code-action run" id="${id}-run">▶ Exécuter</button>` : ''}
         <button class="code-action save" id="${id}-save">💾 Enregistrer</button>
         <span class="code-action-status" id="${id}-status"></span>
       </div>
     </div>`;
   }).join('');
+  codeModalBody.querySelectorAll('.code-action.preview').forEach(btn=>{
+    const ev = codeEventsCache[btn.id.split('-')[1]];
+    btn.addEventListener('click', ()=> visualizeCodeEvent(ev, btn));
+  });
   codeModalBody.querySelectorAll('.code-action.run').forEach(btn=>{
     const ev = codeEventsCache[btn.id.split('-')[1]];
     btn.addEventListener('click', ()=> runCodeEvent(ev, btn));
@@ -6278,6 +6308,59 @@ async function runCodeEvent(ev, btn){
     status.classList.add('err');
     status.textContent = 'Erreur : ' + (e.message||e);
   }
+}
+
+async function visualizeCodeEvent(ev, btn){
+  const status = btn.closest('.code-event-actions').querySelector('.code-action-status');
+  const lang = ev.lang || langFromPath(ev.path);
+  const code = ev.new != null ? String(ev.new) : '';
+  status.textContent = 'Chargement…';
+  status.className = 'code-action-status';
+  try{
+    if(lang === 'html' || lang === 'htm'){
+      openCodePreview(ev, code);
+      status.textContent = 'Aperçu ouvert.';
+      status.classList.add('ok');
+      return;
+    }
+    const r = await fetch('API/code/run', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ path: ev.path, code, lang })
+    });
+    const d = await r.json();
+    if(d.ok){
+      openCodeOutputPanel(ev, code, d.output || '', lang);
+      status.textContent = '✓ Résultat affiché.';
+      status.classList.add('ok');
+    } else {
+      openCodeOutputPanel(ev, code, d.output || d.error || 'Erreur inconnue', lang);
+      status.textContent = '✓ Résultat affiché (erreur).';
+      status.classList.add('ok');
+    }
+  }catch(e){
+    status.classList.add('err');
+    status.textContent = 'Erreur : ' + (e.message||e);
+  }
+}
+
+function openCodeOutputPanel(ev, code, output, lang){
+  let panel = document.getElementById('codeOutputPanel');
+  if(!panel){
+    panel = document.createElement('div');
+    panel.id = 'codeOutputPanel';
+    panel.className = 'code-output-panel';
+    panel.innerHTML = `<div class="code-output-head"><span>▶ Résultat</span><button class="code-modal-close" id="codeOutputClose" title="Fermer">✕</button></div><div class="code-output-content"></div>`;
+    codeModalBody.appendChild(panel);
+    panel.querySelector('#codeOutputClose').addEventListener('click', ()=> panel.remove());
+  }
+  panel.style.display = 'block';
+  const content = panel.querySelector('.code-output-content');
+  const displayCode = (code || '').trim();
+  const displayOutput = (output || '').trim();
+  content.innerHTML = `<div class="code-output-section"><div class="code-output-label">📝 Code (${escapeHtml(lang)})</div><pre class="code-output-pre">${escapeHtml(displayCode)}</pre></div>` +
+    (displayOutput ? `<div class="code-output-section"><div class="code-output-label">📺 Sortie</div><pre class="code-output-pre output">${escapeHtml(displayOutput)}</pre></div>` : '');
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function openCodePreview(ev, htmlText){
