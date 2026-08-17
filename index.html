@@ -615,7 +615,131 @@
   .alex-task-icon{ font-size:14px; }
   .alex-task-text{ font-size:12px; color:rgba(255,246,234,0.8); }
   
-  /* --- Clarify Widget --- */
+  /* --- Widget Progression Tâche --- */
+  .widget-task-progress{
+    background:rgba(255,157,61,0.04);
+    border:1px solid rgba(255,157,61,0.15);
+    border-radius:16px; padding:16px;
+    margin:6px 0; max-width:90%;
+    animation: widgetIn .4s ease-out;
+  }
+  .widget-task-progress .tp-header{
+    display:flex; align-items:center; gap:10px; margin-bottom:12px;
+  }
+  .widget-task-progress .tp-icon{
+    width:32px; height:32px; border-radius:50%;
+    background:rgba(255,157,61,0.12);
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0; position:relative;
+  }
+  .widget-task-progress .tp-icon::after{
+    content:''; position:absolute; inset:-3px;
+    border:2px solid transparent; border-top-color:#ff9d3d;
+    border-radius:50%; animation:spin 1.2s linear infinite;
+  }
+  .widget-task-progress .tp-title{
+    font-size:15px; font-weight:600; color:#ffc98c;
+  }
+  .widget-task-progress .tp-subtitle{
+    font-size:11px; color:rgba(255,246,234,0.4); margin-top:1px;
+  }
+  .widget-task-progress .tp-steps{
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .tp-step{
+    display:flex; align-items:center; gap:10px;
+    padding:8px 12px; border-radius:10px;
+    background:rgba(255,255,255,0.03);
+    border:1px solid rgba(255,255,255,0.06);
+    font-size:13px; color:rgba(255,246,234,0.7);
+    transition: all 0.4s ease;
+    position:relative; overflow:hidden;
+  }
+  .tp-step::before{
+    content:''; position:absolute; left:0; top:0; bottom:0; width:0;
+    background:linear-gradient(90deg, rgba(255,157,61,0.08), transparent);
+    transition: width 0.6s ease;
+  }
+  .tp-step.active::before{ width:100%; }
+  .tp-step.active{
+    border-color:rgba(255,157,61,0.3);
+    color:#ffc98c;
+  }
+  .tp-step.done{
+    border-color:rgba(76,175,80,0.2);
+    color:rgba(255,246,234,0.5);
+  }
+  .tp-step.error-step{
+    border-color:rgba(244,67,54,0.2);
+    color:rgba(255,122,122,0.7);
+  }
+  .tp-step .step-icon{
+    width:20px; height:20px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0; font-size:11px;
+    transition: all 0.3s ease;
+  }
+  .tp-step.pending .step-icon{
+    background:rgba(255,255,255,0.06); color:rgba(255,246,234,0.3);
+  }
+  .tp-step.active .step-icon{
+    background:rgba(255,157,61,0.2); color:#ffc98c;
+    animation:stepPulse 1.5s ease-in-out infinite;
+  }
+  .tp-step.done .step-icon{
+    background:rgba(76,175,80,0.2); color:#81c784;
+  }
+  .tp-step.error-step .step-icon{
+    background:rgba(244,67,54,0.15); color:#ef9a9a;
+  }
+  @keyframes stepPulse{
+    0%,100%{ transform:scale(1); box-shadow:0 0 0 0 rgba(255,157,61,0.3); }
+    50%{ transform:scale(1.1); box-shadow:0 0 0 6px rgba(255,157,61,0); }
+  }
+  .tp-step .step-label{ flex:1; position:relative; z-index:1; }
+  .tp-step .step-duration{
+    font-size:10px; color:rgba(255,246,234,0.3); font-family:ui-monospace,monospace;
+    position:relative; z-index:1;
+  }
+  .tp-progress-bar{
+    width:100%; height:3px; background:rgba(255,255,255,0.08);
+    border-radius:2px; margin-top:12px; overflow:hidden;
+  }
+  .tp-progress-fill{
+    height:100%; border-radius:2px;
+    background:linear-gradient(90deg, #ff9d3d, #ffc98c);
+    transition: width 0.6s ease;
+  }
+  .tp-done-badge{
+    display:flex; align-items:center; justify-content:center; gap:6px;
+    margin-top:10px; padding:6px 12px; border-radius:8px;
+    background:rgba(76,175,80,0.1); border:1px solid rgba(76,175,80,0.2);
+    font-size:12px; color:#81c784;
+    animation: widgetIn .3s ease-out;
+  }
+  
+  /* --- Widget Thinking amélioré --- */
+  .alex-thinking-wrap{ margin-bottom:6px; }
+  .alex-thinking-toggle{
+    background:rgba(255,157,61,0.08); border:1px solid rgba(255,157,61,0.2);
+    color:rgba(255,246,234,0.5); font-size:11px; padding:4px 10px;
+    border-radius:8px; cursor:pointer; font-family:inherit;
+    display:flex; align-items:center; gap:5px; width:fit-content;
+    transition:all 0.2s;
+  }
+  .alex-thinking-toggle:hover{
+    background:rgba(255,157,61,0.14); border-color:rgba(255,157,61,0.3);
+  }
+  .alex-thinking-content{
+    max-height:60px; overflow:hidden; transition:max-height 0.4s ease;
+    font-size:11px; color:rgba(255,246,234,0.3); font-style:italic;
+    padding:6px 10px; margin-top:4px;
+    border-left:2px solid rgba(255,157,61,0.15);
+    white-space:pre-wrap; word-break:break-word;
+    line-height:1.5;
+  }
+  
+  /* --- Widget Clarify --- */
   .widget-clarify{
     align-self:flex-start; max-width:280px;
     background:rgba(255,157,61,0.06);
@@ -5232,7 +5356,7 @@ async function handleAlexReply(userText, chatCid = ''){
               
               const btn = document.createElement('button');
               btn.className = 'alex-thinking-toggle';
-              btn.textContent = '🧠 Penser';
+              btn.textContent = '🧠 Réflexion';
               btn.style.cssText = 'background:rgba(255,157,61,0.08);border:1px solid rgba(255,157,61,0.2);color:rgba(255,246,234,0.5);font-size:11px;padding:3px 8px;border-radius:6px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:4px;width:fit-content;';
               
               const badge = document.createElement('span');
@@ -5264,6 +5388,77 @@ async function handleAlexReply(userText, chatCid = ''){
             }
             const loading = msgDiv.querySelector('.alex-loading');
             if(loading) loading.style.display = 'none';
+            scrollToBottom();
+            continue;
+          }
+          if(parsed.type === 'task_progress'){
+            const steps = parsed.steps || [];
+            const title = parsed.title || 'Alex travaille...';
+            const subtitle = parsed.subtitle || '';
+            const progress = parsed.progress || 0;
+            const isDone = parsed.done === true;
+            const existing = msgDiv.querySelector('.widget-task-progress');
+            if(existing){
+              // Update existing widget
+              const stepsEl = existing.querySelector('.tp-steps');
+              if(stepsEl){
+                stepsEl.innerHTML = steps.map(s => {
+                  const icon = s.status === 'done' ? '✓' : s.status === 'active' ? '⟳' : s.status === 'error' ? '✗' : '○';
+                  return `<div class="tp-step ${s.status}">
+                    <div class="step-icon">${icon}</div>
+                    <div class="step-label">${escapeHtml(s.label)}</div>
+                    ${s.duration ? '<div class="step-duration">' + escapeHtml(s.duration) + '</div>' : ''}
+                  </div>`;
+                }).join('');
+              }
+              const fill = existing.querySelector('.tp-progress-fill');
+              if(fill) fill.style.width = progress + '%';
+              if(isDone){
+                const iconEl = existing.querySelector('.tp-icon');
+                if(iconEl) iconEl.innerHTML = '✓';
+                const badge = document.createElement('div');
+                badge.className = 'tp-done-badge';
+                badge.textContent = 'Terminé ✓';
+                existing.appendChild(badge);
+                const barEl = existing.querySelector('.tp-progress-bar');
+                if(barEl) barEl.style.display = 'none';
+              }
+            } else {
+              // Create new widget
+              const loading = msgDiv.querySelector('.alex-loading');
+              if(loading) loading.style.display = 'none';
+              const w = document.createElement('div');
+              w.className = 'widget-task-progress';
+              w.innerHTML = `
+                <div class="tp-header">
+                  <div class="tp-icon">${isDone ? '✓' : '⟳'}</div>
+                  <div>
+                    <div class="tp-title">${escapeHtml(title)}</div>
+                    ${subtitle ? '<div class="tp-subtitle">' + escapeHtml(subtitle) + '</div>' : ''}
+                  </div>
+                </div>
+                <div class="tp-steps">
+                  ${steps.map(s => {
+                    const icon = s.status === 'done' ? '✓' : s.status === 'active' ? '⟳' : s.status === 'error' ? '✗' : '○';
+                    return `<div class="tp-step ${s.status}">
+                      <div class="step-icon">${icon}</div>
+                      <div class="step-label">${escapeHtml(s.label)}</div>
+                      ${s.duration ? '<div class="step-duration">' + escapeHtml(s.duration) + '</div>' : ''}
+                    </div>`;
+                  }).join('')}
+                </div>
+                <div class="tp-progress-bar"><div class="tp-progress-fill" style="width:${progress}%"></div></div>
+                ${isDone ? '<div class="tp-done-badge">Terminé ✓</div>' : ''}
+              `;
+              msgDiv.appendChild(w);
+            }
+            scrollToBottom();
+            continue;
+          }
+          if(parsed.type === 'proposal'){
+            const loading = msgDiv.querySelector('.alex-loading');
+            if(loading) loading.style.display = 'none';
+            showProposalWidget(parsed.proposal || parsed);
             scrollToBottom();
             continue;
           }
@@ -5520,7 +5715,19 @@ async function handleAlexReply(userText, chatCid = ''){
     if(err.name === 'AbortError'){ return; }
     msgDiv.remove();
     showShape('error', 800);
-    sendMessage("Impossible de joindre le cerveau d'Alex — le service Python (uvicorn) tourne-t-il ?", 'alex');
+    // Widget erreur élégant
+    const errDiv = document.createElement('div');
+    errDiv.className = 'msg alex';
+    errDiv.innerHTML = `<div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:10px;animation:widgetIn .3s ease-out">
+      <div style="width:32px;height:32px;border-radius:50%;background:rgba(239,68,68,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px">⚠️</div>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:600;color:#ef9a9a;margin-bottom:2px">Erreur de connexion</div>
+        <div style="font-size:12px;color:rgba(255,246,234,0.5)">${err.message === 'Failed to fetch' ? 'Le serveur ne répond pas — vérifie qu\'Alex tourne' : escapeHtml(err.message)}</div>
+      </div>
+      <button onclick="this.closest('.msg').remove();handleAlexReply(lastUserMessage)" style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.25);border-radius:8px;padding:6px 12px;color:#ef9a9a;font-size:12px;cursor:pointer;font-family:inherit">Réessayer</button>
+    </div>`;
+    chatArea.appendChild(errDiv);
+    scrollToBottom();
     setTimeout(()=> setOrbState('idle'), 200);
   } finally {
     currentAbort = null;

@@ -1135,11 +1135,38 @@ async def chat_opencode(req: ChatRequest):
         if tool_calls:
             results = {}
             tool_names = []
-            for tc in tool_calls:
+            # Send initial task progress
+            tool_labels = {
+                'recherche_image': 'Recherche d\'images',
+                'recherche_video': 'Recherche de vidéos',
+                'recherche_web': 'Recherche web',
+                'recherche_audio': 'Recherche audio',
+                'executer_commande': 'Exécution de commande',
+                'creer_site_web': 'Création du site web',
+                'lire_fichier': 'Lecture de fichier',
+                'lire_pdf': 'Lecture du PDF',
+                'lire_image': 'Analyse d\'image',
+                'ecrivez_code': 'Écriture de code',
+                'lancer_serveur_dev': 'Lancement du serveur',
+                'meteo': 'Consultation météo',
+                'lister_dossier': 'Exploration du dossier',
+            }
+            init_steps = [{"label": tool_labels.get(tc["tool"], tc["tool"]), "status": "active"} for tc in tool_calls]
+            yield f"data: {json.dumps({'type': 'task_progress', 'title': 'Alex exécute ' + str(len(tool_calls)) + ' tâche(s)', 'steps': init_steps, 'progress': 0})}\n\n"
+            
+            for ti, tc in enumerate(tool_calls):
                 tool_name = tc["tool"]
                 tool_names.append(tool_name)
                 params = tc["params"]
                 try:
+                    # Update progress
+                    done_steps = [{"label": tool_labels.get(tool_names[j], tool_names[j]), "status": "done"} for j in range(ti)]
+                    done_steps.append({"label": tool_labels.get(tool_name, tool_name), "status": "active"})
+                    for j in range(ti+1, len(tool_calls)):
+                        done_steps.append({"label": tool_labels.get(tool_names[j], tool_names[j]), "status": "pending"})
+                    prog = int((ti / len(tool_calls)) * 100)
+                    yield f"data: {json.dumps({'type': 'task_progress', 'title': 'Alex exécute ' + str(len(tool_calls)) + ' tâche(s)', 'steps': done_steps, 'progress': prog})}\n\n"
+                    
                     result = await tools_registry.execute(tool_name, params)
                     key = f"{tool_name}:{':'.join(f'{k}={v}' for k,v in params.items())}"
                     if result.startswith("⚠️ Action dangereuse"):
@@ -1150,6 +1177,10 @@ async def chat_opencode(req: ChatRequest):
                 except Exception as e:
                     key = f"{tool_name}:{':'.join(f'{k}={v}' for k,v in params.items())}"
                     results[key] = f"Erreur: {e}"
+
+            # Send done progress
+            done_steps = [{"label": tool_labels.get(t, t), "status": "done"} for t in tool_names]
+            yield f"data: {json.dumps({'type': 'task_progress', 'title': 'Tâches terminées', 'steps': done_steps, 'progress': 100, 'done': True})}\n\n"
 
             final_reply = _replace_tool_calls(reply_text, results)
             remaining = final_reply[len(reply_text):]
