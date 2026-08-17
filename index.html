@@ -4300,6 +4300,9 @@ function showClarifyWidget(question, options, callback){
       const index = parseInt(opt.dataset.index);
       const selected = options[index];
       
+      // Arreter Alex immédiatement
+      stopAlex();
+      
       // Afficher la selection
       w.innerHTML = `
         <div class="clarify-title">
@@ -4308,7 +4311,7 @@ function showClarifyWidget(question, options, callback){
         </div>
       `;
       
-      // Envoyer la reponse a Alex
+      // Envoyer la reponse a Alex (sans TTS)
       if(callback) callback(selected);
       
       // Envoyer au serveur
@@ -4405,6 +4408,8 @@ function showProposalWidget(data){
       btn.addEventListener('click', ()=>{
         w.querySelectorAll('.prop-opt').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
+        // Arreter Alex avant d'envoyer la reponse
+        stopAlex();
         const value = btn.dataset.value;
         sendMessage(value, 'user');
         handleAlexReply(value);
@@ -5338,8 +5343,17 @@ async function handleAlexReply(userText, chatCid = ''){
   const msgDiv = document.createElement('div');
   msgDiv.className = 'msg alex';
   msgDiv.innerHTML = `<div style="position:relative">
-    <div class="alex-task-status"><span class="alex-task-spinner"></span><span class="alex-task-text">Alex réfléchit...</span></div>
-    <button class="bubble-stop-btn" onclick="stopAlex()" title="Arrêter" style="position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;border:1px solid rgba(255,80,80,0.25);background:rgba(255,80,80,0.08);color:rgba(255,150,150,0.7);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;z-index:5;transition:all .2s" onmouseover="this.style.background='rgba(255,80,80,0.2)';this.style.borderColor='rgba(255,80,80,0.5)'" onmouseout="this.style.background='rgba(255,80,80,0.08)';this.style.borderColor='rgba(255,80,80,0.25)'">■</button>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <button class="alex-thinking-toggle" onclick="const c=this.closest('.msg').querySelector('.alex-thinking-content');const b=this.querySelector('.thinking-badge');const vis=c.style.maxHeight==='0px'||!c.style.maxHeight;c.style.maxHeight=vis?'200px':'0px';c.style.opacity=vis?'0.4':'0';b.textContent=vis?'▼':'▶'" style="display:flex;align-items:center;gap:6px;background:rgba(255,157,61,0.08);border:1px solid rgba(255,157,61,0.2);color:rgba(255,246,234,0.6);padding:5px 10px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:12px;width:fit-content">
+        <span class="alex-task-spinner" style="width:12px;height:12px;border-width:1.5px"></span>
+        <span class="toggle-label">Alex réfléchit...</span>
+        <span class="thinking-badge" style="font-size:9px;opacity:0.5">▶</span>
+      </button>
+      <button class="bubble-stop-btn" onclick="stopAlex()" title="Arrêter" style="width:22px;height:22px;border-radius:50%;border:1px solid rgba(255,80,80,0.25);background:rgba(255,80,80,0.08);color:rgba(255,150,150,0.7);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;transition:all .2s" onmouseover="this.style.background='rgba(255,80,80,0.2)';this.style.borderColor='rgba(255,80,80,0.5)'" onmouseout="this.style.background='rgba(255,80,80,0.08)';this.style.borderColor='rgba(255,80,80,0.25)'">■</button>
+    </div>
+    <div class="alex-thinking-content" style="max-height:0px;overflow:hidden;opacity:0;transition:all 0.3s ease;font-size:11px;color:rgba(255,246,234,0.3);font-style:italic;padding:0 10px;border-left:2px solid rgba(255,157,61,0.15);white-space:pre-wrap;word-break:break-word;line-height:1.5;margin-top:4px">
+      <span class="thinking-stream-text"></span>
+    </div>
   </div>`;
   chatArea.appendChild(msgDiv);
   scrollToBottom();
@@ -5372,48 +5386,13 @@ async function handleAlexReply(userText, chatCid = ''){
         try{
           const parsed = JSON.parse(payload);
           if(parsed.type === 'thinking'){
-            // Bulle de thinking avec bouton +/-
-            const existing = msgDiv.querySelector('.alex-thinking-wrap');
-            if(existing){
-              // Ajouter au thinking existant
-              const pre = existing.querySelector('.alex-thinking-text');
-              if(pre) pre.textContent += parsed.text;
-            } else {
-              const wrap = document.createElement('div');
-              wrap.className = 'alex-thinking-wrap';
-              wrap.style.cssText = 'margin-bottom:6px;';
-              
-              const btn = document.createElement('button');
-              btn.className = 'alex-thinking-toggle';
-              btn.textContent = '🧠 Réflexion';
-              btn.style.cssText = 'background:rgba(255,157,61,0.08);border:1px solid rgba(255,157,61,0.2);color:rgba(255,246,234,0.5);font-size:11px;padding:3px 8px;border-radius:6px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:4px;width:fit-content;';
-              
-              const badge = document.createElement('span');
-              badge.className = 'thinking-badge';
-              badge.textContent = '−';
-              badge.style.cssText = 'font-size:9px;opacity:0.5;';
-              btn.appendChild(badge);
-              
-              const content = document.createElement('div');
-              content.className = 'alex-thinking-content';
-              content.style.cssText = 'max-height:60px;overflow:hidden;transition:max-height 0.3s ease;font-size:10px;color:rgba(255,246,234,0.3);font-style:italic;padding:4px 8px;margin-top:2px;border-left:2px solid rgba(255,157,61,0.15);white-space:pre-wrap;word-break:break-word;';
-              
-              const textSpan = document.createElement('span');
-              textSpan.className = 'alex-thinking-text';
-              textSpan.textContent = parsed.text;
-              content.appendChild(textSpan);
-              
-              let expanded = false;
-              btn.onclick = () => {
-                expanded = !expanded;
-                badge.textContent = expanded ? '−' : '+';
-                content.style.maxHeight = expanded ? '300px' : '60px';
-                content.style.opacity = expanded ? '0.6' : '0.3';
-              };
-              
-              wrap.appendChild(btn);
-              wrap.appendChild(content);
-              msgDiv.appendChild(wrap);
+            // Ajouter le texte de réflexion au contenu du toggle
+            const streamText = msgDiv.querySelector('.thinking-stream-text');
+            if(streamText){
+              streamText.textContent += parsed.text;
+              // Auto-scroll le contenu
+              const content = streamText.closest('.alex-thinking-content');
+              if(content) content.scrollTop = content.scrollHeight;
             }
             const loading = msgDiv.querySelector('.alex-loading');
             if(loading) loading.style.display = 'none';
