@@ -3297,6 +3297,8 @@ let micAutoStarted = false;
 async function autoStartMic(){
   if(micAutoStarted || micActive) return;
   if(typeof require === 'undefined') return;
+  const isIsland = appEl && appEl.classList.contains('mode-island');
+  if(!isIsland) return;
   micAutoStarted = true;
   await connectMic();
 }
@@ -4047,7 +4049,8 @@ function playNextInQueue(){
     queuePlaying = false;
     setSpeaking(false);
     setOrbState('idle');
-    if(listenAlways && micActive){
+    const isIslandMode = appEl && appEl.classList.contains('mode-island');
+    if(listenAlways && micActive && isIslandMode){
       startServerSTT();
     }
     return;
@@ -4128,7 +4131,8 @@ function stopAlex(){
   // Nettoyer le bouton stop dans la bulle
   const bubbleStop = chatArea.querySelector('.bubble-stop-btn');
   if(bubbleStop) bubbleStop.style.display = 'none';
-  if(listenAlways && micActive){
+  const isIslandMode2 = appEl && appEl.classList.contains('mode-island');
+  if(listenAlways && micActive && isIslandMode2){
     startServerSTT();
   }
 }
@@ -5703,6 +5707,11 @@ async function handleAlexReply(userText, chatCid = ''){
         }
       }
       if(fullReply.trim()) msgDiv.innerHTML = renderAlexBubble(fullReply, true);
+      // Cacher le widget thinking quand la réponse est terminée
+      const thinkToggle = msgDiv.querySelector('.alex-thinking-toggle');
+      if(thinkToggle) thinkToggle.style.display = 'none';
+      const thinkContent = msgDiv.querySelector('.alex-thinking-content');
+      if(thinkContent) thinkContent.style.display = 'none';
       scrollToBottom();
       
       // Detecter si Alex demande une clarification
@@ -7895,6 +7904,17 @@ if(typeof require !== 'undefined'){
       }
       setTimeout(initViz, 100);
       setTimeout(resizeRenderer, 50);
+      if(mode === 'island' && !micActive){
+        connectMic().then(ok => { if(ok) startVoiceRecord(); });
+      } else if(mode === 'full' && micActive){
+        stopVoiceRecord();
+        if(micSource && micSource.mediaStream) micSource.mediaStream.getTracks().forEach(t => t.stop());
+        micActive = false;
+        micActionBtn.classList.remove('active');
+        document.getElementById('islandMic').classList.add('muted');
+        appEl.classList.remove('mic-active');
+        setOrbState('idle');
+      }
     });
 
     /* Sync settings from settings window */
