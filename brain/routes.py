@@ -338,6 +338,10 @@ def _extract_user_data(message: str):
             r"j'habite à\s+(\w[\w\s]*?)(?:\.|,|$)",
             r"je vis à\s+(\w[\w\s]*?)(?:\.|,|$)",
         ],
+        "pays": [
+            r"je suis (\w[\w\s]*?)(?:\.|,|$)",
+            r"je viens de\s+(\w[\w\s]*?)(?:\.|,|$)",
+        ],
         "age": [
             r"j'ai\s+(\d+)\s+ans",
             r"mon âge est\s+(\d+)",
@@ -345,11 +349,53 @@ def _extract_user_data(message: str):
         "travail": [
             r"je suis\s+(\w[\w\s]*?)(?:\.|,|$)",
             r"je travaille (?:en tant que|comme|chez)\s+(.+?)(?:\.|,|$)",
+            r"mon métier est\s+(.+?)(?:\.|,|$)",
+            r"je fais du\s+(\w+)",
+        ],
+        "langage": [
+            r"j'utilise (?:le|la|les)\s+(python|javascript|typescript|rust|go|java|c\+\+|php|ruby|swift|kotlin)",
+            r"je code (?:en|avec)\s+(python|javascript|typescript|rust|go|java|c\+\+|php|ruby|swift|kotlin)",
+            r"mon langage (?:favori|principal|privilégié) (?:est|c'est)\s+(python|javascript|typescript|rust|go|java|c\+\+|php|ruby|swift|kotlin)",
+        ],
+        "os": [
+            r"j'utilise\s+(ubuntu|debian|fedora|arch|manjaro|windows|macos|mac os|linux|mint|pop!_os|zorin)",
+            r"mon (?:système|os) (?:est|c'est)\s+(ubuntu|debian|fedora|arch|manjaro|windows|macos|mac os|linux|mint|pop!_os|zorin)",
+        ],
+        "projet": [
+            r"je (?:travaille|bosse) sur\s+(.+?)(?:\.|,|$)",
+            r"mon projet (?:est|c'est)\s+(.+?)(?:\.|,|$)",
+            r"je développe\s+(.+?)(?:\.|,|$)",
         ],
         "loisirs": [
             r"j'aime\s+(.+?)(?:\.|,|$)",
             r"mes hobbies sont\s+(.+?)(?:\.|,|$)",
             r"je fais du\s+(\w+)",
+            r"ma passion (?:est|c'est)\s+(.+?)(?:\.|,|$)",
+        ],
+        "musique": [
+            r"j'écoute\s+(.+?)(?:\.|,|$)",
+            r"ma musique préférée (?:est|c'est)\s+(.+?)(?:\.|,|$)",
+        ],
+        "nourriture": [
+            r"j'adore\s+(manger|la cuisine|les? .+?)(?:\.|,|$)",
+            r"ma nourriture préférée (?:est|c'est)\s+(.+?)(?:\.|,|$)",
+        ],
+        "couleur": [
+            r"ma couleur préférée (?:est|c'est)\s+(\w+)",
+            r"j'aime le\s+(\w+)",
+        ],
+        "privacy": [
+            r"(?:je ne veux pas|pas de|interdit|jamais).*(?:partager|donner|envoyer|publier).*(\w+)",
+            r"(?:ma vie privée|ma confidentialité|mes données).*(?:est|sont)\s+(importante?|primordiale?|sacrée?)",
+        ],
+        "famille": [
+            r"ma (?:femme|mère|père|sœur|frère|fille|fils|famille|copine|petite amie|compagnon|compagne) (?:s'appelle|est|s'appelle)\s+(\w+)",
+            r"j'ai (?:un|une|des)\s+(femme|mère|père|sœur|frère|fille|fils|copine|petite amie|compagnon|compagne)",
+        ],
+        "objectif": [
+            r"je veux\s+(.+?)(?:\.|,|$)",
+            r"mon objectif (?:est|c'est)\s+(.+?)(?:\.|,|$)",
+            r"j'aimerais\s+(.+?)(?:\.|,|$)",
         ],
     }
 
@@ -387,7 +433,7 @@ def _build_agent_loop_prompt() -> str:
     try:
         facts = memory.get_all_facts()
         if facts:
-            lines = "\n".join(f"  - {f['key']}: {f['value']}" for f in facts[:15])
+            lines = "\n".join(f"  - {f['key']}: {f['value']}" for f in facts[:30])
             parts.append(f"## Ce que je sais sur {USER_NAME}\n{lines}")
         level_info = memory.get_level()
         parts.append(f"## Mon expérience\nNiveau {level_info['level']}, {level_info['total_interactions']} interactions à vie.")
@@ -403,10 +449,15 @@ def _build_system_prompt(with_memory: bool = True) -> str:
     try:
         facts = memory.get_all_facts()
         if facts:
-            lines = "\n".join(f"  - {f['key']}: {f['value']}" for f in facts[:15])
+            lines = "\n".join(f"  - {f['key']}: {f['value']}" for f in facts[:30])
             base += f"\n\n## Ce que je sais sur {USER_NAME}\n{lines}"
         level_info = memory.get_level()
         base += f"\n\n## Mon expérience\nNiveau {level_info['level']}, {level_info['total_interactions']} interactions à vie."
+        base += "\n\n## RAPPEL IMPORTANT\n"
+        base += "- Tu as une mémoire longue durée. Utilise-la !\n"
+        base += "- Si on te donne une information personnelle, rappelle-la dans les conversations suivantes.\n"
+        base += "- Retiens toujours les préférences, projets, famille, musique, nourriture, etc.\n"
+        base += "- NE JAMAIS demander deux fois la même information déjà donnée.\n"
     except Exception:
         pass
     return base

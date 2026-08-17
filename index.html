@@ -5672,7 +5672,15 @@ async function handleAlexReply(userText, chatCid = ''){
           }
         }catch(e){
           hideStatusOverlay();
-          msgDiv.innerHTML = renderAlexBubble(fullReply + payload, false);
+          const thinkWrap = msgDiv.querySelector('.alex-thinking-toggle')?.closest('div[style]');
+          const bubbleHtml = renderAlexBubble(fullReply + payload, false);
+          let bubble = msgDiv.querySelector('.bubble');
+          if(!bubble){
+            bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            msgDiv.appendChild(bubble);
+          }
+          bubble.innerHTML = bubbleHtml;
           fullReply += payload;
           if(isNearBottom()) forceScrollBottom();
           if(!formeProcessed){
@@ -7494,14 +7502,16 @@ if(typeof require !== 'undefined'){
     }
 
     function loadConversation(i){
-      // remonte chrono (l'historique arrive du plus récent au plus ancien)
-      const msgs = cmAll[i].full.slice().reverse();
+      const conv = cmAll[i];
+      if(!conv) return;
+      const msgs = conv.full.slice().reverse();
       chatArea.innerHTML = '';
       for(const m of msgs){
         if(m.role==='user') logChatMsg('user', m.content);
         else logChatMsg('alex', m.content);
       }
       scrollToBottom();
+      closeChatMenu();
     }
 
     function openChatMenu(){
@@ -8367,15 +8377,19 @@ setTimeout(showWelcomeMsg, 100);
   }
 
   function loadConversation(i){
-    const msgs = cmAll[i].full.slice().reverse();
+    const conv = cmAll[i];
+    if(!conv) return;
+    const msgs = conv.full.slice().reverse();
     chatArea.innerHTML = '';
     for(const m of msgs){
       const div = document.createElement('div');
       div.className = 'msg ' + (m.role==='user' ? 'user' : 'alex');
-      div.textContent = m.content;
+      if(m.role==='alex'){ div.innerHTML = renderAlexBubble(m.content, true); }
+      else { div.textContent = m.content; }
       chatArea.appendChild(div);
     }
     if(chatArea.scrollTop !== undefined) chatArea.scrollTop = chatArea.scrollHeight;
+    closeChatMenu();
   }
 
   function buildConversations(messages){
