@@ -304,6 +304,7 @@
   .msg .filepath{ color:#c792ea; font-style:italic; }
   .msg .flag{ color:#82aaff; }
   .msg .keyword{ color:#ff9d3d; font-weight:600; }
+  .msg .md-link{ color:#8ab4f8; text-decoration:underline; text-decoration-color:rgba(138,180,248,0.3); word-break:break-all; }
   .msg .bold{ font-weight:900; color:#fff; }
   .msg em{ font-style:italic; color:#ffd9b0; }
   .msg .md-p{ margin:4px 0; }
@@ -4983,6 +4984,7 @@ function toggleThink(btn){
 
 /* --- Petit rendu markdown (headings, listes, puces, gras, tableaux) --- */
 function inlineMd(s){
+  if(/<(?:div|span|img|iframe|video|audio|a\b)/.test(s)) return s;
   return s
     .replace(/`([^`]+)`/g, '<span class="inline-code">$1</span>')
     .replace(/\*\*([^*]+)\*\*/g, '<span class="bold">$1</span>')
@@ -4990,10 +4992,9 @@ function inlineMd(s){
     .replace(/★([^★]+)★/g, '<span class="hl">$1</span>')
     .replace(/(^|[\s\(\)\[\]{}:;,!?\n])(\d+(?:[\.,]\d+)?)(?=[\s\(\)\[\]{}:;,!?\n]|$)/g, '$1<span class="num">$2</span>')
     .replace(/\b(docker|kubectl|git|npm|yarn|pip|apt|systemctl|curl|wget|ssh|sudo|chmod|chown|mkdir|rm|cp|mv|ls|cat|grep|find|sed|awk|tar|zip|unzip)\b/g, '<span class="cmd">$1</span>')
-    .replace(/(\/[\w./\-]+\.\w{1,5})\b/g, '<span class="filepath">$1</span>')
-    .replace(/\b([\w./\-]+\.(js|ts|py|html|css|json|md|yml|yaml|toml|sh|bash|vue|jsx|tsx))\b/g, '<span class="filepath">$1</span>')
-    .replace(/(\s)(--?[\w-]+)(?=[\s=]|$)/g, '$1<span class="flag">$2</span>')
-    .replace(/\b(install|create|delete|update|upgrade|build|deploy|run|start|stop|restart|enable|disable|add|remove|push|pull|clone|commit|merge|status)\b/gi, '<span class="keyword">$1</span>');
+    .replace(/\b(install|create|delete|update|upgrade|build|deploy|run|start|stop|restart|enable|disable|add|remove|push|pull|clone|commit|merge|status)\b/gi, '<span class="keyword">$1</span>')
+    .replace(/\b(https?:\/\/[^\s<>]+)\b/g, '<a href="$1" target="_blank" rel="noopener" class="md-link">$1</a>')
+    .replace(/(\s)(--?[\w-]+)(?=[\s=]|$)/g, '$1<span class="flag">$2</span>');
 }
 function renderTable(lines){
   if(lines.length < 2) return null;
@@ -5048,7 +5049,11 @@ function renderMd(h){
     const bu = t.match(/^[ \t]*(?:[-*+•]|\*{1,2}[ \t]+)[ \t]+(.*)$/);
     if(bu){ if(listType && listType!=='ul') flush(); if(!listType) listType='ul'; items.push(inlineMd(bu[1])); i++; continue; }
     flush();
-    out.push(`<p class="md-p">${inlineMd(t.trim())}</p>`);
+    if(/^<(?:div|span|img|iframe|video|audio|table|ul|ol|hr|p\b)/.test(t.trim())){
+      out.push(t.trim());
+    } else {
+      out.push(`<p class="md-p">${inlineMd(t.trim())}</p>`);
+    }
     i++;
   }
   flush();
