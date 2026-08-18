@@ -5397,6 +5397,12 @@ async function handleAlexReply(userText, chatCid = ''){
   let spokenDuringStream = false;
   let pastThinking = false;
   let formeProcessed = false;
+
+  function _setBubbleHtml(html){
+    let b = msgDiv.querySelector('.bubble');
+    if(!b){ b = document.createElement('div'); b.className = 'bubble'; msgDiv.appendChild(b); }
+    b.innerHTML = html;
+  }
   try{
     const res = await fetch(API + '/chat/opencode', {
       method: 'POST',
@@ -5548,7 +5554,7 @@ async function handleAlexReply(userText, chatCid = ''){
           if(parsed.state){ setOrbState(parsed.state); continue; }
           if(parsed.shape){ showShape(parsed.shape, 3000); continue; }
           if(parsed.reply && parsed.source?.startsWith('skill')){
-            msgDiv.innerHTML = renderMd(renderMediaContent(parsed.reply));
+            _setBubbleHtml(renderMd(renderMediaContent(parsed.reply)));
             fullReply = parsed.reply;
             isSkill = true;
             break;
@@ -5607,7 +5613,7 @@ async function handleAlexReply(userText, chatCid = ''){
             if(out) termAddEvent(parsed.ok ? 'info' : 'error', out.slice(0,400));
             termAddEvent(parsed.ok ? 'success' : 'error', (parsed.command || '').slice(0,80) + (parsed.ok ? ' ✓' : ' ✕'));
             hideStatusOverlay();
-            msgDiv.innerHTML = renderAlexBubble(fullReply, true);
+            _setBubbleHtml(renderAlexBubble(fullReply, true));
             const chip = document.createElement('div');
             chip.className = 'widget widget-cmd';
             chip.style.marginTop = '8px';
@@ -5624,7 +5630,7 @@ async function handleAlexReply(userText, chatCid = ''){
           if(parsed.type === 'workflow'){
             // Workflow multi-étapes : afficher progression dans la bulle
             hideStatusOverlay();
-            msgDiv.innerHTML = renderAlexBubble(fullReply, true);
+            _setBubbleHtml(renderAlexBubble(fullReply, true));
             const wf = parsed.workflow || {};
             const steps = wf.steps || [];
             const currentStep = wf.current_step || 0;
@@ -5720,12 +5726,18 @@ async function handleAlexReply(userText, chatCid = ''){
           }
         }
       }
-      if(fullReply.trim()) msgDiv.innerHTML = renderAlexBubble(fullReply, true);
+      if(fullReply.trim()){
+        let bubble = msgDiv.querySelector('.bubble');
+        if(!bubble){
+          bubble = document.createElement('div');
+          bubble.className = 'bubble';
+          msgDiv.appendChild(bubble);
+        }
+        bubble.innerHTML = renderAlexBubble(fullReply, true);
+      }
       // Cacher le widget thinking quand la réponse est terminée
-      const thinkToggle = msgDiv.querySelector('.alex-thinking-toggle');
-      if(thinkToggle) thinkToggle.style.display = 'none';
-      const thinkContent = msgDiv.querySelector('.alex-thinking-content');
-      if(thinkContent) thinkContent.style.display = 'none';
+      const thinkWrap = msgDiv.querySelector('.alex-thinking-toggle')?.closest('div[style]');
+      if(thinkWrap) thinkWrap.style.display = 'none';
       scrollToBottom();
       
       // Detecter si Alex demande une clarification
