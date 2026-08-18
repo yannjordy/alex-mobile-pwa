@@ -6,16 +6,12 @@ import io
 # Voix françaises disponibles (Edge TTS)
 VOICES = {
     "denise": {"id": "fr-FR-DeniseNeural", "name": "Denise — française, douce", "gender": "Female", "lang": "fr-FR"},
-    "charline": {"id": "fr-FR-EloiseNeural", "name": "Charline — belge, pétillante", "gender": "Female", "lang": "fr-FR"},
+    "charline": {"id": "fr-FR-EloiseNeural", "name": "Charline — française, pétillante", "gender": "Female", "lang": "fr-FR"},
     "henri": {"id": "fr-FR-HenriNeural", "name": "Henri — français, masculin", "gender": "Male", "lang": "fr-FR"},
     "remy": {"id": "fr-FR-RemyMultilingualNeural", "name": "Rémy — français, multilingue", "gender": "Male", "lang": "fr-FR"},
     "vivienne": {"id": "fr-FR-VivienneMultilingualNeural", "name": "Vivienne — française, multilingue", "gender": "Female", "lang": "fr-FR"},
-    "sylvie": {"id": "fr-FR-SylvieNeural", "name": "Sylvie — française, mature", "gender": "Female", "lang": "fr-FR"},
-    "jacques": {"id": "fr-CA-JacquesNeural", "name": "Jacques — canadien, masculin", "gender": "Male", "lang": "fr-CA"},
     "jean": {"id": "fr-CA-JeanNeural", "name": "Jean — canadien, jeune", "gender": "Male", "lang": "fr-CA"},
     "antoine": {"id": "fr-CA-AntoineNeural", "name": "Antoine — canadien, mature", "gender": "Male", "lang": "fr-CA"},
-    "mathieu": {"id": "fr-BE-MathieuNeural", "name": "Mathieu — belge, masculin", "gender": "Male", "lang": "fr-BE"},
-    "elise": {"id": "fr-BE-EliseNeural", "name": "Élise — belge, féminin", "gender": "Female", "lang": "fr-BE"},
     "ariane": {"id": "fr-CH-ArianeNeural", "name": "Ariane — suisse, féminin", "gender": "Female", "lang": "fr-CH"},
     "fabrice": {"id": "fr-CH-FabriceNeural", "name": "Fabrice — suisse, masculin", "gender": "Male", "lang": "fr-CH"},
 }

@@ -5081,12 +5081,21 @@ function renderAlexBubble(raw, isFinal){
       html += renderMd(renderMediaContent(chunk));
     }
   });
-  // Ajouter le bouton "Écouter" à la fin de chaque message Alex
+  // Ajouter un bouton "Écouter" après chaque paragraphe du message
+  html = html.replace(/(<p[^>]*>[\s\S]*?<\/p>)/gi, (match, pTag) => {
+    const textContent = pTag.replace(/<[^>]+>/g, '').trim();
+    const cleanText = stripMdForTTS(textContent);
+    if(!cleanText || cleanText.length < 3) return match;
+    const safeText = cleanText.replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, ' ');
+    const uid = 'lp-' + Date.now() + '-' + Math.random().toString(36).slice(2,6);
+    return match + `<span class="line-listen-btn" id="${uid}" onclick="toggleLineListen(this)" data-text="${safeText}" title="Écouter cette phrase" style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;border:1px solid rgba(255,157,61,0.15);background:rgba(255,157,61,0.04);color:rgba(255,157,61,0.35);cursor:pointer;margin-left:4px;vertical-align:middle;transition:all .2s ease;flex-shrink:0" onmouseover="this.style.background='rgba(255,157,61,0.12)';this.style.color='#ff9d3d'" onmouseout="if(!this.classList.contains('playing')){this.style.background='rgba(255,157,61,0.04)';this.style.color='rgba(255,157,61,0.35)'}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M11 5L6 9H2v6h4l5 4V5z" fill="currentColor"/><path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>`;
+  });
+  // Ajouter le bouton "Écouter tout" à la fin du message
   const listenId = 'listen-' + Date.now() + '-' + Math.random().toString(36).slice(2,6);
   const plainText = stripMdForTTS(raw.replace(/\[PENS[ÉE]E?\][\s\S]*?\[\/PENS[ÉE]E?\]/gi, '').replace(/\[PENS[ÉE]E?\][\s\S]*$/gi, '').replace(/\[TODO\][\s\S]*?\[\/TODO\]/gi, '').replace(/\[FORME:[^\[\]]*\]/gi, '').replace(/\[\[tool:[^\]]*\]\]/gi, '').trim());
   if(plainText){
     const safeText = plainText.replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, ' ');
-    html += `<div class="msg-listen-btn" id="${listenId}" onclick="toggleListenMsg(this,'${listenId}')" data-text="${safeText}" title="Écouter ce message" style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;border:1px solid rgba(255,157,61,0.2);background:rgba(255,157,61,0.06);color:rgba(255,157,61,0.5);cursor:pointer;margin-top:6px;transition:all .2s ease;flex-shrink:0" onmouseover="this.style.background='rgba(255,157,61,0.15)';this.style.color='#ff9d3d'" onmouseout="if(!this.classList.contains('playing')){this.style.background='rgba(255,157,61,0.06)';this.style.color='rgba(255,157,61,0.5)'}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M11 5L6 9H2v6h4l5 4V5z" fill="currentColor"/><path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>`;
+    html += `<div class="msg-listen-btn" id="${listenId}" onclick="toggleListenMsg(this,'${listenId}')" data-text="${safeText}" title="Écouter tout le message" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:14px;border:1px solid rgba(255,157,61,0.15);background:rgba(255,157,61,0.04);color:rgba(255,157,61,0.4);cursor:pointer;margin-top:6px;transition:all .2s ease;flex-shrink:0;font-size:11px" onmouseover="this.style.background='rgba(255,157,61,0.12)';this.style.color='#ff9d3d'" onmouseout="if(!this.classList.contains('playing')){this.style.background='rgba(255,157,61,0.04)';this.style.color='rgba(255,157,61,0.4)'}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M11 5L6 9H2v6h4l5 4V5z" fill="currentColor"/><path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> Tout</div>`;
   }
   return html;
 }
@@ -5099,55 +5108,65 @@ function toggleThink(btn){
 
 let _currentListenAudio = null;
 let _currentListenBtn = null;
-function toggleListenMsg(btn, listenId){
-  // Si déjà en lecture, arrêter
-  if(_currentListenBtn === btn && _currentListenAudio){
-    _currentListenAudio.pause();
-    _currentListenAudio.currentTime = 0;
-    _currentListenAudio = null;
-    btn.classList.remove('playing');
-    btn.style.background = 'rgba(255,157,61,0.06)';
-    btn.style.color = 'rgba(255,157,61,0.5)';
-    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M11 5L6 9H2v6h4l5 4V5z" fill="currentColor"/><path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
-    _currentListenBtn = null;
-    return;
-  }
-  // Arrêter tout player précédent
+function _stopCurrentListen(){
   if(_currentListenAudio){
     _currentListenAudio.pause();
     _currentListenAudio.currentTime = 0;
-    if(_currentListenBtn){
-      _currentListenBtn.classList.remove('playing');
-      _currentListenBtn.style.background = 'rgba(255,157,61,0.06)';
-      _currentListenBtn.style.color = 'rgba(255,157,61,0.5)';
-      _currentListenBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M11 5L6 9H2v6h4l5 4V5z" fill="currentColor"/><path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
-    }
+    _currentListenAudio = null;
   }
+  if(_currentListenBtn){
+    _currentListenBtn.classList.remove('playing');
+    _currentListenBtn.style.background = '';
+    _currentListenBtn.style.color = '';
+    // Restore icon
+    const svg = _currentListenBtn.querySelector('svg');
+    if(svg) svg.innerHTML = '<path d="M11 5L6 9H2v6h4l5 4V5z" fill="currentColor"/><path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>';
+    _currentListenBtn = null;
+  }
+}
+function toggleLineListen(btn){
+  if(_currentListenBtn === btn && _currentListenAudio){
+    _stopCurrentListen();
+    return;
+  }
+  _stopCurrentListen();
   const text = btn.getAttribute('data-text');
   if(!text) return;
-  // Icône pause
   btn.classList.add('playing');
-  btn.style.background = 'rgba(255,157,61,0.2)';
-  btn.style.color = '#ff9d3d';
-  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor"/><rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor"/></svg>';
+  const svg = btn.querySelector('svg');
+  if(svg) svg.innerHTML = '<rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor"/><rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor"/>';
+  fetchTTSBlob(text).then(blob=>{
+    const audio = new Audio(URL.createObjectURL(blob));
+    _currentListenAudio = audio;
+    _currentListenBtn = btn;
+    audio.onended = ()=>{ _stopCurrentListen(); };
+    audio.play();
+  }).catch(()=>{ _stopCurrentListen(); });
+}
+function toggleListenMsg(btn, listenId){
+  if(_currentListenBtn === btn && _currentListenAudio){
+    _stopCurrentListen();
+    return;
+  }
+  _stopCurrentListen();
+  const text = btn.getAttribute('data-text');
+  if(!text) return;
+  btn.classList.add('playing');
+  btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none"><rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor"/><rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor"/></svg> Lecture...';
   fetchTTSBlob(text).then(blob=>{
     const audio = new Audio(URL.createObjectURL(blob));
     _currentListenAudio = audio;
     _currentListenBtn = btn;
     audio.onended = ()=>{
       btn.classList.remove('playing');
-      btn.style.background = 'rgba(255,157,61,0.06)';
-      btn.style.color = 'rgba(255,157,61,0.5)';
-      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M11 5L6 9H2v6h4l5 4V5z" fill="currentColor"/><path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+      btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M11 5L6 9H2v6h4l5 4V5z" fill="currentColor"/><path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> Tout';
       _currentListenAudio = null;
       _currentListenBtn = null;
     };
     audio.play();
   }).catch(()=>{
     btn.classList.remove('playing');
-    btn.style.background = 'rgba(255,157,61,0.06)';
-    btn.style.color = 'rgba(255,157,61,0.5)';
-    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M11 5L6 9H2v6h4l5 4V5z" fill="currentColor"/><path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+    btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M11 5L6 9H2v6h4l5 4V5z" fill="currentColor"/><path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> Tout';
   });
 }
 
@@ -7889,15 +7908,15 @@ if(typeof require !== 'undefined'){
     /* --- Voice list --- */
     let voiceListData = [];
     const FALLBACK_VOICES = [
-      {id:'denise',name:'Denise — française, chaleureuse'},
-      {id:'eloise',name:'Éloïse — française, douce'},
-      {id:'vivienne',name:'Vivienne — française, multilingue'},
-      {id:'sylvie',name:'Sylvie — québécoise, dynamique'},
-      {id:'ariane',name:'Ariane — suisse, élégante'},
-      {id:'charline',name:'Charline — belge, pétillante'},
-      {id:'henri',name:'Henri — français, masculin'},
-      {id:'remy',name:'Rémy — français, masculin, multilingue'},
-      {id:'clone',name:'Alex (clone) — depuis Alex.ogg'},
+      {id:'denise',name:'Denise — française, douce',gender:'Female',lang:'fr-FR'},
+      {id:'charline',name:'Charline — française, pétillante',gender:'Female',lang:'fr-FR'},
+      {id:'henri',name:'Henri — français, masculin',gender:'Male',lang:'fr-FR'},
+      {id:'remy',name:'Rémy — français, multilingue',gender:'Male',lang:'fr-FR'},
+      {id:'vivienne',name:'Vivienne — française, multilingue',gender:'Female',lang:'fr-FR'},
+      {id:'jean',name:'Jean — canadien, jeune',gender:'Male',lang:'fr-CA'},
+      {id:'antoine',name:'Antoine — canadien, mature',gender:'Male',lang:'fr-CA'},
+      {id:'ariane',name:'Ariane — suisse, féminin',gender:'Female',lang:'fr-CH'},
+      {id:'fabrice',name:'Fabrice — suisse, masculin',gender:'Male',lang:'fr-CH'},
     ];
     function showFallbackVoices(container){
       voiceListData = FALLBACK_VOICES;
