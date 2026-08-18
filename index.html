@@ -3311,9 +3311,37 @@ function sendVoiceRecordFromChunks(chunks){
     return '<div class="vp-bar" style="height:'+h+'px"></div>';
   }).join('');
   const uid = 'vp-' + Date.now();
-  const html = '<div class="voice-player" id="'+uid+'"><button class="vp-play" onclick="vpToggle(this,\''+url+'\')" aria-label="Play"><svg viewBox="0 0 24 24" fill="none"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></button><div class="vp-track"><div class="vp-wave" onclick="vpSeek(event,this,\''+url+'\')">'+bars+'</div><div class="vp-info"><span class="vp-time">00:00 / '+timeStr+'</span><span class="vp-size">'+Math.round(blob.size/1024)+' Ko</span></div></div></div>';
-  addMsg('user', html, 'has-file');
+  const playerHtml = '<div class="voice-player" id="'+uid+'"><button class="vp-play" onclick="vpToggle(this,\''+url+'\')" aria-label="Play"><svg viewBox="0 0 24 24" fill="none"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></button><div class="vp-track"><div class="vp-wave" onclick="vpSeek(event,this,\''+url+'\')">'+bars+'</div><div class="vp-info"><span class="vp-time">00:00 / '+timeStr+'</span><span class="vp-size">'+Math.round(blob.size/1024)+' Ko</span></div></div></div>';
+  const transcribingHtml = playerHtml + '<div class="vp-transcript" style="font-size:12px;color:rgba(255,246,234,0.4);font-style:italic;padding:4px 0;">Transcription en cours...</div>';
+  const msgDiv = addMsg('user', transcribingHtml, 'has-file');
   vpInit(uid, url, duration);
+
+  // Transcrire l'audio et envoyer à Alex
+  const reader = new FileReader();
+  reader.onload = async function(){
+    const base64 = reader.result.split(',')[1];
+    try{
+      const resp = await fetch(API+'/stt', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/octet-stream'},
+        body: blob
+      });
+      const data = await resp.json();
+      const transcript = (data.text || '').trim();
+      const transcriptEl = msgDiv.querySelector('.vp-transcript');
+      if(transcript){
+        if(transcriptEl) transcriptEl.innerHTML = '<span style="color:rgba(255,246,234,0.6)">🎤 </span>' + escapeHtml(transcript);
+        // Envoyer la transcription à Alex via le flow chat principal
+        handleAlexReply(transcript);
+      } else {
+        if(transcriptEl) transcriptEl.innerHTML = '<span style="color:rgba(239,68,68,0.6)">Impossible de transcrire l\'audio</span>';
+      }
+    } catch(e){
+      const transcriptEl = msgDiv.querySelector('.vp-transcript');
+      if(transcriptEl) transcriptEl.innerHTML = '<span style="color:rgba(239,68,68,0.6)">Erreur de transcription</span>';
+    }
+  };
+  reader.readAsDataURL(blob);
 }
 
 const _vpPlayers = {};
