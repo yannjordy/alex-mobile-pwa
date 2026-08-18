@@ -3099,7 +3099,7 @@ async function startServerSTT(){
         
         // Envoyer au serveur pour transcription
         try {
-          const resp = await fetch('API/stt', {
+          const resp = await fetch(API + '/stt', {
             method: 'POST',
             headers: { 'Content-Type': 'audio/webm' },
             body: audioData
@@ -4149,7 +4149,7 @@ let speechQueue = [];
 let queuePlaying = false;
 
 function fetchTTSBlob(text){
-  return fetch('API/vocal', {
+  return fetch(API + '/vocal', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text, voice: currentVoice })
@@ -4420,7 +4420,7 @@ function showConfirmWidget(cid, toolName, params, desc, risk){
     w.querySelector('.confirm-yes').disabled = true;
     w.querySelector('.confirm-no').disabled = true;
     w.innerHTML = '<div style="font-size:13px;color:#81c784;text-align:center;">Exécution...</div>';
-    const res = await fetch('API/tools/confirm', {
+    const res = await fetch(API + '/tools/confirm', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ confirmation_id: cid, accept: true })
     });
@@ -4439,7 +4439,7 @@ function showConfirmWidget(cid, toolName, params, desc, risk){
   };
   w.querySelector('.confirm-no').onclick = async ()=>{
     w.remove();
-    await fetch('API/tools/confirm', {
+    await fetch(API + '/tools/confirm', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ confirmation_id: cid, accept: false })
     });
@@ -4606,7 +4606,7 @@ function showProposalWidget(data){
           try{
             const params = {...payload};
             delete params.tool;
-            const res = await fetch('API/tools/execute', {
+            const res = await fetch(API + '/tools/execute', {
               method: 'POST',
               headers: {'Content-Type': 'application/json'},
               body: JSON.stringify({ tool: payload.tool, params })
@@ -4743,7 +4743,7 @@ function dlRestore(){
 
 async function dlPoll(){
   try{
-    const r = await fetch('API/downloads/status', {signal: AbortSignal.timeout(4000)});
+    const r = await fetch(API + '/downloads/status', {signal: AbortSignal.timeout(4000)});
     const d = await r.json();
     const items = d.items || [];
     const active = items.filter(i => i.status === 'running').length;
@@ -4825,7 +4825,7 @@ document.addEventListener('click', (e)=>{
   e.stopPropagation();
   if(btn.dataset.cancel){
     const id = btn.dataset.cancel;
-    fetch('API/downloads/cancel', {
+    fetch(API + '/downloads/cancel', {
       method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id })
     }).catch(()=>{});
   } else if(btn.dataset.details){
@@ -5012,11 +5012,11 @@ function addChatCodeEvent(path, code, lang){
   const ev = { path, diff:'', ok:true, ts, old:null, new:code, lang: lang || '', source:'chat' };
   codeEventsCache.unshift(ev);
   if(codeEventsCache.length > 20) codeEventsCache.length = 20;
-  fetch('API/code/file?path=' + encodeURIComponent(path))
+  fetch(API + '/code/file?path=' + encodeURIComponent(path))
     .then(r=> r.ok ? r.json() : null)
     .then(d=>{ if(d && typeof d.content === 'string' && ev.old == null){ ev.old = d.content; renderCodeModal(); } })
     .catch(()=>{});
-  fetch('API/code/event', {
+  fetch(API + '/code/event', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({path, code, lang: lang || ''})
   }).catch(()=>{});
@@ -6193,7 +6193,7 @@ async function checkNetwork(){
   const el = document.getElementById('islandConnect');
   if(!el) return;
   try{
-    const r = await fetch('API/health', {signal: AbortSignal.timeout(5000)});
+    const r = await fetch(API + '/health', {signal: AbortSignal.timeout(5000)});
     const d = await r.json();
     el.className = d.online ? 'online' : 'offline';
   }catch{
@@ -6208,7 +6208,7 @@ async function reportPosition(){
     const pos = ipcRenderer.invoke('get-position');
     if(!pos) return;
     const data = await pos;
-    await fetch('API/position/update', {
+    await fetch(API + '/position/update', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ cursor: data.cursor, window: data.window })
@@ -6581,7 +6581,7 @@ async function runCodeEvent(ev, btn){
       status.classList.add('ok');
       return;
     }
-    const r = await fetch('API/code/run', {
+    const r = await fetch(API + '/code/run', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ path: ev.path, code: newText, lang })
@@ -6608,7 +6608,7 @@ async function visualizeCodeEvent(ev, btn){
       status.classList.add('ok');
       return;
     }
-    const r = await fetch('API/code/run', {
+    const r = await fetch(API + '/code/run', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ path: ev.path, code, lang })
@@ -6827,7 +6827,7 @@ function paneRow(r, side, lang){
 }
 async function loadCodeLog(){
   try{
-    const r = await fetch('API/code/log');
+    const r = await fetch(API + '/code/log');
     const d = await r.json();
     for(const ev of (d.events || [])) addCodeEvent({ path: ev.path, diff: ev.diff, ok: ev.ok, ts: ev.time, old: ev.old, new: ev.new, lang: ev.lang });
     renderCodeModal();
@@ -6980,7 +6980,7 @@ termModal.addEventListener('click', (e)=>{ if(e.target === termModal) closeTermM
 document.getElementById('termClear').addEventListener('click', ()=>{
   termEvents = []; termSeenIds.clear();
   termBody.innerHTML = '<div style="color:#5a6577;">— journal vidé —</div>';
-  fetch('API/activity/clear', {method:'POST'}).catch(()=>{});
+  fetch(API + '/activity/clear', {method:'POST'}).catch(()=>{});
 });
 document.getElementById('termAuto').addEventListener('click', (e)=>{
   termAutoScroll = !termAutoScroll;
@@ -7026,7 +7026,7 @@ function termAddEvent(level, message){
 }
 
 function termPoll(){
-  fetch('API/activity?limit=150', {signal: AbortSignal.timeout(4000)})
+  fetch(API + '/activity?limit=150', {signal: AbortSignal.timeout(4000)})
     .then(r=> r.json())
     .then(d=>{
       const evs = d.events || [];
@@ -7780,7 +7780,7 @@ if(typeof require !== 'undefined'){
       menuBtn.classList.add('open');
       chatMenu.classList.remove('hidden');
       cmSearch.value = '';
-      fetch('API/history')
+      fetch(API + '/history')
         .then(r=>r.json())
         .then(data=>{
           cmAll = buildConversations(data.messages || []);
@@ -7812,7 +7812,7 @@ if(typeof require !== 'undefined'){
     document.getElementById('cmClearAll').addEventListener('click', (e)=>{
       e.stopPropagation();
       if(!confirm('Supprimer toutes les conversations ?')) return;
-      fetch('API/history', { method:'DELETE' })
+      fetch(API + '/history', { method:'DELETE' })
         .then(()=>{ cmAll=[]; renderCmlist(); })
         .catch(()=>{});
     });
@@ -8019,7 +8019,7 @@ if(typeof require !== 'undefined'){
     function buildVoiceList(retries=5){
       const container = document.getElementById('dashVoiceList');
       container.innerHTML = '<div style="color:rgba(255,246,234,0.3);font-size:12px;">Chargement des voix...</div>';
-      fetch('API/voices').then(r=> r.json()).then(data=>{
+      fetch(API + '/voices').then(r=> r.json()).then(data=>{
         voiceListData = data.voices;
         container.innerHTML = data.voices.map(v => `
           <div class="voice-item ${v.id===currentVoice?'selected':''}" data-voice="${v.id}">
@@ -8060,7 +8060,7 @@ if(typeof require !== 'undefined'){
             this.classList.add('playing');
             this.querySelector('.ico-play').style.display = 'none';
             this.querySelector('.ico-stop').style.display = '';
-            fetch('API/vocal', {
+            fetch(API + '/vocal', {
               method:'POST', headers:{'Content-Type':'application/json'},
               body: JSON.stringify({text: testText, voice: vid})
             }).then(r=> r.blob()).then(blob=>{
@@ -8088,7 +8088,7 @@ if(typeof require !== 'undefined'){
       const container = document.getElementById('dashModelList');
       if(!container) return;
       container.innerHTML = '<div style="color:rgba(255,246,234,0.3);font-size:12px;">Chargement des modèles...</div>';
-      fetch('API/models').then(r=> r.json()).then(data=>{
+      fetch(API + '/models').then(r=> r.json()).then(data=>{
         currentModel = data.current || 'alex:latest';
         document.getElementById('currentModelName').textContent = currentModel;
         container.innerHTML = data.models.map(m => `
@@ -8104,7 +8104,7 @@ if(typeof require !== 'undefined'){
           el.addEventListener('click', function(){
             const model = this.dataset.model;
             if(model === currentModel) return;
-            fetch('API/model', {
+            fetch(API + '/model', {
               method:'POST', headers:{'Content-Type':'application/json'},
               body: JSON.stringify({model})
             }).then(r=> r.json()).then(res=>{
@@ -8235,7 +8235,7 @@ if(typeof require !== 'undefined'){
     ipcRenderer.on('screen-frame', (event, dataUrl)=>{
       const badge = document.getElementById('screenShareBadge');
       if(badge) badge.style.display = 'block';
-      fetch('API/vision/analyze', {
+      fetch(API + '/vision/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ image: dataUrl })
@@ -8363,7 +8363,7 @@ async function loadScheduledTasks() {
   if (!tasksList || !tasksBadge) return;
   
   try {
-    const response = await fetch('API/chat/opencode', {
+    const response = await fetch(API + '/chat/opencode', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: 'Liste mes tâches programmées' })
