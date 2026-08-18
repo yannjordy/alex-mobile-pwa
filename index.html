@@ -5081,6 +5081,13 @@ function renderAlexBubble(raw, isFinal){
       html += renderMd(renderMediaContent(chunk));
     }
   });
+  // Ajouter le bouton "Écouter" à la fin de chaque message Alex
+  const listenId = 'listen-' + Date.now() + '-' + Math.random().toString(36).slice(2,6);
+  const plainText = stripMdForTTS(raw.replace(/\[PENS[ÉE]E?\][\s\S]*?\[\/PENS[ÉE]E?\]/gi, '').replace(/\[PENS[ÉE]E?\][\s\S]*$/gi, '').replace(/\[TODO\][\s\S]*?\[\/TODO\]/gi, '').replace(/\[FORME:[^\[\]]*\]/gi, '').replace(/\[\[tool:[^\]]*\]\]/gi, '').trim());
+  if(plainText){
+    const safeText = plainText.replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, ' ');
+    html += `<div class="msg-listen-btn" id="${listenId}" onclick="toggleListenMsg(this,'${listenId}')" data-text="${safeText}" title="Écouter ce message" style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;border:1px solid rgba(255,157,61,0.2);background:rgba(255,157,61,0.06);color:rgba(255,157,61,0.5);cursor:pointer;margin-top:6px;transition:all .2s ease;flex-shrink:0" onmouseover="this.style.background='rgba(255,157,61,0.15)';this.style.color='#ff9d3d'" onmouseout="if(!this.classList.contains('playing')){this.style.background='rgba(255,157,61,0.06)';this.style.color='rgba(255,157,61,0.5)'}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M11 5L6 9H2v6h4l5 4V5z" fill="currentColor"/><path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>`;
+  }
   return html;
 }
 function toggleThink(btn){
@@ -5088,6 +5095,60 @@ function toggleThink(btn){
   if(!box) return;
   box.classList.toggle('collapsed');
   btn.textContent = box.classList.contains('collapsed') ? '+' : '−';
+}
+
+let _currentListenAudio = null;
+let _currentListenBtn = null;
+function toggleListenMsg(btn, listenId){
+  // Si déjà en lecture, arrêter
+  if(_currentListenBtn === btn && _currentListenAudio){
+    _currentListenAudio.pause();
+    _currentListenAudio.currentTime = 0;
+    _currentListenAudio = null;
+    btn.classList.remove('playing');
+    btn.style.background = 'rgba(255,157,61,0.06)';
+    btn.style.color = 'rgba(255,157,61,0.5)';
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M11 5L6 9H2v6h4l5 4V5z" fill="currentColor"/><path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+    _currentListenBtn = null;
+    return;
+  }
+  // Arrêter tout player précédent
+  if(_currentListenAudio){
+    _currentListenAudio.pause();
+    _currentListenAudio.currentTime = 0;
+    if(_currentListenBtn){
+      _currentListenBtn.classList.remove('playing');
+      _currentListenBtn.style.background = 'rgba(255,157,61,0.06)';
+      _currentListenBtn.style.color = 'rgba(255,157,61,0.5)';
+      _currentListenBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M11 5L6 9H2v6h4l5 4V5z" fill="currentColor"/><path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+    }
+  }
+  const text = btn.getAttribute('data-text');
+  if(!text) return;
+  // Icône pause
+  btn.classList.add('playing');
+  btn.style.background = 'rgba(255,157,61,0.2)';
+  btn.style.color = '#ff9d3d';
+  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor"/><rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor"/></svg>';
+  fetchTTSBlob(text).then(blob=>{
+    const audio = new Audio(URL.createObjectURL(blob));
+    _currentListenAudio = audio;
+    _currentListenBtn = btn;
+    audio.onended = ()=>{
+      btn.classList.remove('playing');
+      btn.style.background = 'rgba(255,157,61,0.06)';
+      btn.style.color = 'rgba(255,157,61,0.5)';
+      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M11 5L6 9H2v6h4l5 4V5z" fill="currentColor"/><path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+      _currentListenAudio = null;
+      _currentListenBtn = null;
+    };
+    audio.play();
+  }).catch(()=>{
+    btn.classList.remove('playing');
+    btn.style.background = 'rgba(255,157,61,0.06)';
+    btn.style.color = 'rgba(255,157,61,0.5)';
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M11 5L6 9H2v6h4l5 4V5z" fill="currentColor"/><path d="M15.54 8.46a5 5 0 010 7.07M19.07 4.93a10 10 0 010 14.14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+  });
 }
 
 /* --- Petit rendu markdown (headings, listes, puces, gras, tableaux) --- */
