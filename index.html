@@ -1026,6 +1026,32 @@
   .dash-section{ display:none; animation: dashCardIn .3s ease; }
   .dash-section.active{ display:block; }
 
+  @media(max-width:640px){
+    #dashPanel{ flex-direction:column; }
+    #dashSidebar{
+      width:100%; flex-direction:row; border-right:none;
+      border-bottom:1px solid rgba(255,157,61,0.08);
+    }
+    #dashSidebarHeader{ display:none; }
+    #dashSidebarNav{
+      flex-direction:row; overflow-x:auto; padding:8px; gap:4px;
+      -webkit-overflow-scrolling:touch;
+    }
+    #dashSidebarNav::-webkit-scrollbar{ display:none; }
+    .dash-nav-item{
+      flex-shrink:0; padding:8px 14px; font-size:12px;
+      border-left:none; border-bottom:2px solid transparent;
+    }
+    .dash-nav-item.active{ border-left:none; border-bottom-color:#ff9d3d; }
+    #dashSidebarFooter{
+      border-top:none; border-left:1px solid rgba(255,157,61,0.06);
+      padding:8px 12px;
+    }
+    #dashBackBtn{ padding:8px 12px; font-size:12px; }
+    #dashBackBtn span{ display:none; }
+    #dashBody{ padding:16px; }
+  }
+
   .dash-card{
     background:rgba(255,255,255,0.03);
     border:1px solid rgba(255,255,255,0.06);
