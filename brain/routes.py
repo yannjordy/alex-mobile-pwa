@@ -1004,8 +1004,10 @@ async def analyze_user_image(req: ImageAnalysisRequest):
             base64_data = image_data_url
 
         # Build message parts with image content
+        # opencode API requires type: "file" with mime and url (data URL)
+        data_url = f"data:{media_type};base64,{base64_data}"
         parts = [
-            {"type": "image", "mediaType": media_type, "data": base64_data},
+            {"type": "file", "mime": media_type, "url": data_url, "filename": "image.png"},
             {"type": "text", "text": f"Tu es Alex, l'assistante de {USER_NAME}. Analyse cette image et réponds en français. Sois concise et utile.\n\nQuestion : {req.question}"}
         ]
 
