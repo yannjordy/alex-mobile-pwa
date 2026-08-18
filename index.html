@@ -5545,9 +5545,8 @@ async function handleAlexReply(userText, chatCid = ''){
   const msgDiv = document.createElement('div');
   msgDiv.className = 'msg alex';
   msgDiv.innerHTML = `<div style="position:relative">
-    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+    <div class="thinking-header" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       <button class="alex-thinking-toggle" onclick="const c=this.closest('.msg').querySelector('.alex-thinking-content');const b=this.querySelector('.thinking-badge');const vis=c.style.maxHeight==='0px'||!c.style.maxHeight;c.style.maxHeight=vis?'200px':'0px';c.style.opacity=vis?'0.4':'0';b.textContent=vis?'▼':'▶'" style="display:flex;align-items:center;gap:6px;background:rgba(255,157,61,0.08);border:1px solid rgba(255,157,61,0.2);color:rgba(255,246,234,0.6);padding:5px 10px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:12px;width:fit-content">
-        <span class="alex-task-spinner" style="width:12px;height:12px;border-width:1.5px"></span>
         <span class="toggle-label">Alex réfléchit...</span>
         <span class="thinking-badge" style="font-size:9px;opacity:0.5">▶</span>
       </button>
@@ -5904,6 +5903,7 @@ async function handleAlexReply(userText, chatCid = ''){
         bubble.innerHTML = renderAlexBubble(fullReply, true);
       }
       // Garder le widget thinking visible mais replié quand la réponse est terminée
+      const thinkHeader = msgDiv.querySelector('.thinking-header');
       const thinkWrap = msgDiv.querySelector('.alex-thinking-toggle')?.closest('div[style]');
       if(thinkWrap){
         const thinkContent = msgDiv.querySelector('.alex-thinking-content');
@@ -5926,6 +5926,11 @@ async function handleAlexReply(userText, chatCid = ''){
         } else {
           thinkWrap.style.display = 'none';
         }
+      }
+      // Cacher le bouton stop une fois la réponse générée
+      if(thinkHeader){
+        const stopBtn = thinkHeader.querySelector('.bubble-stop-btn');
+        if(stopBtn) stopBtn.style.display = 'none';
       }
       scrollToBottom();
       
