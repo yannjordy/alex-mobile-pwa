@@ -312,10 +312,37 @@ def _on_code_changed(path: str, diff: str, ok: bool, old: str = None, new: str =
         )
 
 
+def _clean_reply_for_storage(reply: str) -> str:
+    """Nettoie le reply avant sauvegarde : supprime le thinking qui a pu fuiter."""
+    import re
+    # Supprimer les blocs [PENSÉE]...[/PENSÉE]
+    reply = re.sub(r'\[PENS[ÉE]E?\][\s\S]*?\[/PENS[ÉE]E?\]', '', reply, flags=re.IGNORECASE).strip()
+    reply = re.sub(r'\[PENS[ÉE]E?\][\s\S]*$', '', reply, flags=re.IGNORECASE).strip()
+    # Supprimer les lignes de thinking non balisées (commencent par "The user", "I need", "Let me", etc.)
+    thinking_starts = [
+        r'^The user\b', r'^I need to\b', r'^Let me\b', r'^I should\b',
+        r'^I must\b', r'^I will\b', r'^First,?\b', r'^According to\b',
+    ]
+    lines = reply.split('\n')
+    cleaned = []
+    skip = False
+    for line in lines:
+        stripped = line.strip()
+        if any(re.match(p, stripped, re.IGNORECASE) for p in thinking_starts):
+            skip = True
+            continue
+        if skip and (not stripped or stripped.startswith('#') or stripped.startswith('-') or stripped.startswith('*')):
+            skip = False
+        if not skip:
+            cleaned.append(line)
+    return '\n'.join(cleaned).strip() or reply
+
+
 def _save_interaction(user_msg: str, assistant_reply: str):
     try:
+        cleaned = _clean_reply_for_storage(assistant_reply)
         memory.save_conversation("user", user_msg)
-        memory.save_conversation("assistant", assistant_reply)
+        memory.save_conversation("assistant", cleaned)
         _extract_user_data(user_msg)
         asyncio.create_task(_extract_core_memory(user_msg))
     except Exception as e:
@@ -634,7 +661,7 @@ async def _agent_loop(user_message: str, session_id: str = "") -> Optional[str]:
 
     tool_calls = _parse_tool_calls(reply)
     if not tool_calls:
-        _save_interaction(user_message, reply[:300])
+        _save_interaction(user_message, reply)
         return reply
 
     results = {}
@@ -654,7 +681,7 @@ async def _agent_loop(user_message: str, session_id: str = "") -> Optional[str]:
             print(f"[brain] Tool erreur: {tool_name} → {e}")
 
     final_reply = _replace_tool_calls(reply, results)
-    _save_interaction(user_message, final_reply[:300])
+        _save_interaction(user_message, final_reply)
     return final_reply
 
 
@@ -669,7 +696,7 @@ async def _agent_loop_stream(user_message: str):
             break
     reply_text = "".join(full_reply).strip()
     if reply_text:
-        _save_interaction(user_message, reply_text[:300])
+        _save_interaction(user_message, reply_text)
 
 
 async def _alarm_scheduler():
@@ -1399,9 +1426,9 @@ async def chat_opencode(req: ChatRequest):
                 else:
                     yield f"data: {json.dumps({'type': 'delta', 'text': remaining})}\n\n"
 
-            _save_interaction(req.message, final_reply[:300])
+            _save_interaction(req.message, final_reply)
         elif reply_text:
-            _save_interaction(req.message, reply_text[:300])
+            _save_interaction(req.message, reply_text)
 
         yield "data: [DONE]\n\n"
 
