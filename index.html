@@ -304,6 +304,20 @@
   .msg .filepath{ color:#c792ea; font-style:italic; }
   .msg .flag{ color:#82aaff; }
   .msg .keyword{ color:#ff9d3d; font-weight:600; }
+  /* --- Voice Message Player --- */
+  .voice-player{display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;margin:4px 0;min-width:200px;max-width:320px;}
+  .voice-player .vp-play{flex-shrink:0;width:36px;height:36px;border-radius:50%;border:none;background:rgba(255,157,61,0.15);color:#ff9d3d;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s ease;}
+  .voice-player .vp-play:hover{background:rgba(255,157,61,0.25);transform:scale(1.05);}
+  .voice-player .vp-play:active{transform:scale(0.95);}
+  .voice-player .vp-play svg{width:16px;height:16px;}
+  .voice-player .vp-track{flex:1;display:flex;flex-direction:column;gap:4px;min-width:0;}
+  .voice-player .vp-wave{height:28px;display:flex;align-items:center;gap:1.5px;cursor:pointer;}
+  .voice-player .vp-wave .vp-bar{flex:1;min-width:2px;max-width:3px;border-radius:2px;background:rgba(255,157,61,0.25);transition:background .15s ease;}
+  .voice-player .vp-wave .vp-bar.active{background:#ff9d3d;}
+  .voice-player .vp-wave .vp-bar.played{background:rgba(255,157,61,0.5);}
+  .voice-player .vp-info{display:flex;justify-content:space-between;align-items:center;}
+  .voice-player .vp-time{font-size:11px;color:rgba(255,246,234,0.45);font-variant-numeric:tabular-nums;font-family:'Cascadia Code','Fira Code',monospace;}
+  .voice-player .vp-size{font-size:10px;color:rgba(255,246,234,0.3);}
   .msg .md-link{ color:#8ab4f8; text-decoration:underline; text-decoration-color:rgba(138,180,248,0.3); word-break:break-all; }
   .msg .bold{ font-weight:900; color:#fff; }
   .msg em{ font-style:italic; color:#ffd9b0; }
@@ -3291,8 +3305,73 @@ function sendVoiceRecordFromChunks(chunks){
   const min = Math.floor(duration / 60);
   const sec = duration % 60;
   const timeStr = String(min).padStart(2,'0') + ':' + String(sec).padStart(2,'0');
-  const html = '<div class="file-widget"><div class="file-icon" style="background:rgba(29,185,84,0.1)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" stroke="#1DB954" stroke-width="1.8"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8" stroke="#1DB954" stroke-width="1.8" stroke-linecap="round"/></svg></div><div class="file-info"><div class="file-name">Message vocal</div><div class="file-meta">Audio · '+timeStr+' · '+Math.round(blob.size/1024)+' Ko</div></div></div><audio src="'+url+'" controls style="width:100%;max-width:300px;margin-top:8px;border-radius:8px"></audio>';
+  const barCount = 32;
+  const bars = Array.from({length: barCount}, (_, i) => {
+    const h = Math.random() * 18 + 6;
+    return '<div class="vp-bar" style="height:'+h+'px"></div>';
+  }).join('');
+  const uid = 'vp-' + Date.now();
+  const html = '<div class="voice-player" id="'+uid+'"><button class="vp-play" onclick="vpToggle(this,\''+url+'\')" aria-label="Play"><svg viewBox="0 0 24 24" fill="none"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></button><div class="vp-track"><div class="vp-wave" onclick="vpSeek(event,this,\''+url+'\')">'+bars+'</div><div class="vp-info"><span class="vp-time">00:00 / '+timeStr+'</span><span class="vp-size">'+Math.round(blob.size/1024)+' Ko</span></div></div></div>';
   addMsg('user', html, 'has-file');
+  vpInit(uid, url, duration);
+}
+
+const _vpPlayers = {};
+function vpInit(uid, url, duration){
+  const audio = new Audio(url);
+  audio.preload = 'auto';
+  _vpPlayers[uid] = { audio, duration, playing: false };
+  audio.addEventListener('timeupdate', ()=>{
+    const el = document.getElementById(uid);
+    if(!el) return;
+    const pct = audio.currentTime / duration;
+    const bars = el.querySelectorAll('.vp-bar');
+    const played = Math.floor(pct * bars.length);
+    bars.forEach((b,i)=>{
+      b.classList.toggle('played', i < played);
+      b.classList.toggle('active', i === played);
+    });
+    const cur = audio.currentTime;
+    const m = Math.floor(cur/60), s = Math.floor(cur%60);
+    const timeEl = el.querySelector('.vp-time');
+    if(timeEl) timeEl.textContent = String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')+' / '+String(Math.floor(duration/60)).padStart(2,'0')+':'+String(duration%60).padStart(2,'0');
+  });
+  audio.addEventListener('ended', ()=>{
+    const el = document.getElementById(uid);
+    if(!el) return;
+    const btn = el.querySelector('.vp-play');
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>';
+    _vpPlayers[uid].playing = false;
+    el.querySelectorAll('.vp-bar').forEach(b=>{ b.classList.remove('played','active'); });
+  });
+}
+
+function vpToggle(btn, url){
+  const wrap = btn.closest('.voice-player');
+  const uid = wrap.id;
+  const p = _vpPlayers[uid];
+  if(!p) return;
+  if(p.playing){
+    p.audio.pause();
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>';
+    p.playing = false;
+  } else {
+    Object.keys(_vpPlayers).forEach(k=>{ if(k!==uid && _vpPlayers[k].playing){ _vpPlayers[k].audio.pause(); _vpPlayers[k].playing=false; const e=document.getElementById(k); if(e) e.querySelector('.vp-play').innerHTML='<svg viewBox="0 0 24 24" fill="none"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>'; } });
+    p.audio.currentTime = 0;
+    p.audio.play();
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none"><rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor"/><rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor"/></svg>';
+    p.playing = true;
+  }
+}
+
+function vpSeek(e, waveEl, url){
+  const wrap = waveEl.closest('.voice-player');
+  const uid = wrap.id;
+  const p = _vpPlayers[uid];
+  if(!p) return;
+  const rect = waveEl.getBoundingClientRect();
+  const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  p.audio.currentTime = pct * p.duration;
 }
 
 let micAutoStarted = false;
