@@ -942,15 +942,15 @@
   /* === Dashboard 2026 === */
   #dashOverlay{
     position:fixed; inset:0; z-index:100;
-    background:rgba(5,3,2,0.75);
-    backdrop-filter:blur(14px) saturate(1.2);
-    display:none; align-items:center; justify-content:center;
+    background:#0c0a08;
+    display:none; flex-direction:column;
     animation: dashIn .35s cubic-bezier(0.22,1,0.36,1);
+    overflow:hidden;
   }
   #dashOverlay.open{ display:flex; }
   @keyframes dashIn{
-    from{ opacity:0; backdrop-filter:blur(0); }
-    to{ opacity:1; backdrop-filter:blur(14px) saturate(1.2); }
+    from{ opacity:0; }
+    to{ opacity:1; }
   }
 
 
@@ -968,62 +968,82 @@
     50%{ box-shadow:0 0 40px rgba(255,157,61,0.18); }
   }
   #dashPanel{
-    position:relative; width:min(680px,92vw); max-height:88vh;
+    position:relative; width:100%; height:100%;
     background:linear-gradient(145deg,#16100c 0%,#1f1812 100%);
-    border:1px solid rgba(255,157,61,0.12);
-    border-radius:28px; padding:0; overflow:hidden;
-    box-shadow:0 32px 120px rgba(0,0,0,0.7),0 0 60px rgba(255,157,61,0.04);
-    display:flex; flex-direction:column;
+    border:none;
+    border-radius:0; padding:0; overflow:hidden;
+    box-shadow:none;
+    display:flex; flex-direction:row;
     animation: dashCardIn .4s cubic-bezier(0.22,1,0.36,1);
   }
-  #dashHeader{
-    display:flex; align-items:center; justify-content:space-between;
-    padding:18px 24px 14px;
-    background:linear-gradient(180deg,rgba(255,157,61,0.04) 0%,transparent 100%);
-    border-bottom:1px solid rgba(255,157,61,0.08);
+  #dashSidebar{
+    width:220px; flex-shrink:0;
+    background:rgba(0,0,0,0.3);
+    border-right:1px solid rgba(255,157,61,0.08);
+    display:flex; flex-direction:column;
+    padding:0;
   }
-  #dashHeader h2{
-    margin:0; font-size:20px; font-weight:500; color:#ffddbb;
-    letter-spacing:0.5px;
+  #dashSidebarHeader{
+    padding:24px 20px 20px;
+    border-bottom:1px solid rgba(255,157,61,0.06);
   }
-  #dashHeader h2 span{ color:#ff9d3d; }
-  #dashClose{
-    width:36px; height:36px; border-radius:50%;
-    border:1px solid rgba(255,255,255,0.08);
-    background:rgba(255,255,255,0.04);
-    color:#ffddbb; font-size:18px; cursor:pointer;
-    display:grid; place-items:center; transition:all .2s;
+  #dashSidebarHeader h2{
+    margin:0; font-size:18px; font-weight:600; color:#ffddbb;
+    display:flex; align-items:center; gap:8px;
   }
-  #dashClose:hover{ background:rgba(255,157,61,0.15); border-color:rgba(255,157,61,0.3); }
-
-  /* --- Hamburger nav tabs --- */
-  #dashNav{
-    display:flex; gap:4px; padding:8px 20px 0;
-    background:rgba(255,157,61,0.02);
+  #dashSidebarNav{
+    flex:1; padding:12px 8px;
+    display:flex; flex-direction:column; gap:2px;
   }
-  .dash-tab{
-    padding:10px 18px; border-radius:14px 14px 0 0;
+  .dash-nav-item{
+    display:flex; align-items:center; gap:10px;
+    padding:10px 14px; border-radius:10px;
     font-size:13px; font-weight:500; color:rgba(255,246,234,0.5);
     background:transparent; border:none; cursor:pointer;
-    transition:all .25s; position:relative;
+    transition:all .2s; text-align:left; width:100%;
   }
-  .dash-tab:hover{ color:rgba(255,246,234,0.8); background:rgba(255,157,61,0.04); }
-  .dash-tab.active{
-    color:#ffddbb; background:rgba(255,157,61,0.06);
+  .dash-nav-item:hover{ color:rgba(255,246,234,0.8); background:rgba(255,157,61,0.06); }
+  .dash-nav-item.active{
+    color:#ffddbb; background:rgba(255,157,61,0.1);
+    border-left:2px solid #ff9d3d;
   }
-  .dash-tab.active::after{
-    content:''; position:absolute; bottom:-1px; left:20%; width:60%; height:2px;
-    background:linear-gradient(90deg,transparent,#ff9d3d,transparent);
-    border-radius:2px;
+  .dash-nav-item svg{ flex-shrink:0; }
+  #dashSidebarFooter{
+    padding:16px 20px;
+    border-top:1px solid rgba(255,157,61,0.06);
   }
+  #dashBackBtn{
+    display:flex; align-items:center; gap:8px;
+    padding:10px 14px; border-radius:10px;
+    font-size:13px; color:rgba(255,246,234,0.5);
+    background:transparent; border:1px solid rgba(255,157,61,0.1);
+    cursor:pointer; transition:all .2s; width:100%;
+  }
+  #dashBackBtn:hover{ color:#ffddbb; border-color:rgba(255,157,61,0.3); background:rgba(255,157,61,0.06); }
+
+  /* --- Hamburger nav tabs --- */
+  #dashNav{ display:none; }
 
   /* --- Dashboard body / sections --- */
   #dashBody{
-    flex:1; overflow-y:auto; padding:20px 24px 24px;
+    flex:1; overflow-y:auto; padding:28px 32px 32px;
     scrollbar-width:thin; scrollbar-color:rgba(255,157,61,0.15) transparent;
   }
   .dash-section{ display:none; animation: dashCardIn .3s ease; }
   .dash-section.active{ display:block; }
+
+  @media(max-width:640px){
+    #dashPanel{ flex-direction:column; }
+    #dashSidebar{ width:100%; flex-direction:row; border-right:none; border-bottom:1px solid rgba(255,157,61,0.08); }
+    #dashSidebarHeader{ display:none; }
+    #dashSidebarNav{ flex-direction:row; overflow-x:auto; padding:8px; gap:4px; }
+    .dash-nav-item{ flex-shrink:0; padding:8px 14px; font-size:12px; border-left:none; border-bottom:2px solid transparent; }
+    .dash-nav-item.active{ border-left:none; border-bottom-color:#ff9d3d; }
+    #dashSidebarFooter{ border-top:none; border-left:1px solid rgba(255,157,61,0.06); padding:8px 12px; }
+    #dashBackBtn{ padding:8px 12px; font-size:12px; }
+    #dashBackBtn span{ display:none; }
+    #dashBody{ padding:16px; }
+  }
 
   .dash-card{
     background:rgba(255,255,255,0.03);
@@ -2317,49 +2337,45 @@
 
   <div id="dashOverlay">
     <div id="dashPanel">
-      <div id="dashHeader">
-        <h2>Alex <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="vertical-align:middle"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" stroke="#ff9d3d" stroke-width="1.6" fill="#ff9d3d" fill-opacity="0.15"/></svg> Tableau de bord</h2>
-        <button id="dashClose">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6l-12 12" stroke="#ffddbb" stroke-width="2" stroke-linecap="round"/></svg>
-        </button>
-      </div>
-      <div id="dashNav">
-        <button class="dash-tab active" data-tab="general">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="vertical-align:middle;margin-right:6px;">
-            <path d="M4 21V14M4 10V3M12 21V12M12 8V3M20 21V16M20 12V3" stroke="#ffddbb" stroke-width="1.8" stroke-linecap="round"/>
-            <circle cx="4" cy="12" r="2" stroke="#ffddbb" stroke-width="1.6"/>
-            <circle cx="12" cy="10" r="2" stroke="#ffddbb" stroke-width="1.6"/>
-            <circle cx="20" cy="14" r="2" stroke="#ffddbb" stroke-width="1.6"/>
-          </svg>
-          Général
-        </button>
-        <button class="dash-tab" data-tab="voice">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="vertical-align:middle;margin-right:6px;">
-            <rect x="9" y="2" width="6" height="12" rx="3" stroke="#ffddbb" stroke-width="1.6"/>
-            <path d="M5 11a7 7 0 0014 0M12 19v3M9 22h6" stroke="#ffddbb" stroke-width="1.6" stroke-linecap="round"/>
-          </svg>
-          Voix
-        </button>
-        <button class="dash-tab" data-tab="model">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="vertical-align:middle;margin-right:6px;">
-            <circle cx="12" cy="12" r="3" stroke="#ffddbb" stroke-width="1.6"/>
-            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke="#ffddbb" stroke-width="1.6" stroke-linecap="round"/>
-          </svg>
-          Modèle
-        </button>
-        <button class="dash-tab" data-tab="memory">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="vertical-align:middle;margin-right:6px;">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" stroke="#ffddbb" stroke-width="1.6"/>
-            <path d="M12 6v6l4 2" stroke="#ffddbb" stroke-width="1.6" stroke-linecap="round"/>
-          </svg>
-          Mémoire
-        </button>
-        <button class="dash-tab" data-tab="skills">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="vertical-align:middle;margin-right:6px;">
-            <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" stroke="#ffddbb" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          Skills
-        </button>
+      <div id="dashSidebar">
+        <div id="dashSidebarHeader">
+          <h2>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" stroke="#ff9d3d" stroke-width="1.6" fill="#ff9d3d" fill-opacity="0.15"/></svg>
+            Alex
+          </h2>
+        </div>
+        <div id="dashSidebarNav">
+          <button class="dash-nav-item active" data-tab="general">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 21V14M4 10V3M12 21V12M12 8V3M20 21V16M20 12V3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            Général
+          </button>
+          <button class="dash-nav-item" data-tab="voice">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="9" y="2" width="6" height="12" rx="3" stroke="currentColor" stroke-width="1.6"/><path d="M5 11a7 7 0 0014 0M12 19v3M9 22h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            Voix
+          </button>
+          <button class="dash-nav-item" data-tab="model">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            Modèle
+          </button>
+          <button class="dash-nav-item" data-tab="memory">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" stroke="currentColor" stroke-width="1.6"/><path d="M12 6v6l4 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            Mémoire
+          </button>
+          <button class="dash-nav-item" data-tab="history">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 12a9 9 0 109-9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M3 3v6h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 7v5l3 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            Historique
+          </button>
+          <button class="dash-nav-item" data-tab="skills">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Skills
+          </button>
+        </div>
+        <div id="dashSidebarFooter">
+          <button id="dashBackBtn" onclick="closeDash()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Retour au chat
+          </button>
+        </div>
       </div>
       <div id="dashBody">
 
@@ -2452,6 +2468,16 @@
           <div class="dash-card">
             <h3>Skills disponibles</h3>
             <div id="skillsList" style="color:rgba(255,246,234,0.5);font-size:12px;">
+              Chargement...
+            </div>
+          </div>
+        </div>
+
+        <!-- Section Historique -->
+        <div class="dash-section" id="sec-history">
+          <div class="dash-card">
+            <h3>Conversations récentes</h3>
+            <div id="dashHistoryList" style="color:rgba(255,246,234,0.5);font-size:12px;">
               Chargement...
             </div>
           </div>
@@ -7838,7 +7864,7 @@ if(typeof require !== 'undefined'){
 
     /* --- Dashboard --- */
     const dashOverlay = document.getElementById('dashOverlay');
-    const dashClose = document.getElementById('dashClose');
+    const dashBackBtn = document.getElementById('dashBackBtn');
     const settingsBtn = document.getElementById('settingsBtn');
 
     function openDash(){
@@ -7847,8 +7873,42 @@ if(typeof require !== 'undefined'){
       buildModelList();
       loadMemory();
       loadSkills();
+      loadDashHistory();
     }
     function closeDash(){ dashOverlay.classList.remove('open'); }
+
+    function loadDashHistory(){
+      fetch(API+'/history')
+        .then(r=>r.json())
+        .then(data=>{
+          const el = document.getElementById('dashHistoryList');
+          if(!el) return;
+          const msgs = data.messages || [];
+          if(!msgs.length){
+            el.innerHTML = '<div style="color:rgba(255,246,234,0.3);padding:12px 0;">Aucune conversation pour l\'instant.</div>';
+            return;
+          }
+          const turns = [];
+          let cur = null;
+          for(const m of msgs){
+            if(m.role==='user'){
+              if(cur) turns.push(cur);
+              cur = {q:m.content, a:'', time:m.created_at||''};
+            } else if(cur){
+              cur.a = m.content.slice(0,200);
+            }
+          }
+          if(cur) turns.push(cur);
+          el.innerHTML = turns.slice(0,50).map((t,i)=>`
+            <div style="padding:12px 14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px;margin-bottom:8px;cursor:pointer;" onmouseover="this.style.borderColor='rgba(255,157,61,0.2)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.06)'">
+              <div style="color:#ffc98c;font-size:13px;font-weight:600;margin-bottom:4px;">${escapeHtml(t.q.slice(0,90))}</div>
+              <div style="color:rgba(255,246,234,0.4);font-size:12px;">${escapeHtml(t.a.slice(0,140))}</div>
+              ${t.time?'<div style="color:rgba(255,246,234,0.2);font-size:10px;margin-top:4px;">'+new Date(t.time).toLocaleString('fr-FR')+'</div>':''}
+            </div>
+          `).join('');
+        })
+        .catch(()=>{});
+    }
 
     settingsBtn.addEventListener('click', e=>{ e.stopPropagation(); ipcRenderer.send('open-settings'); });
 
@@ -7893,15 +7953,16 @@ if(typeof require !== 'undefined'){
       }
     });
 
-    dashClose.addEventListener('click', closeDash);
     dashOverlay.addEventListener('click', e=>{ if(e.target===dashOverlay) closeDash(); });
 
     /* --- Tabs --- */
-    document.querySelectorAll('.dash-tab').forEach(tab=>{
+    document.querySelectorAll('.dash-nav-item').forEach(tab=>{
       tab.addEventListener('click', ()=>{
-        document.querySelectorAll('.dash-tab, .dash-section').forEach(el=> el.classList.remove('active'));
+        document.querySelectorAll('.dash-nav-item, .dash-section').forEach(el=> el.classList.remove('active'));
         tab.classList.add('active');
         document.getElementById('sec-'+tab.dataset.tab).classList.add('active');
+        // Charger l'historique quand on clique dessus
+        if(tab.dataset.tab === 'history') loadDashHistory();
       });
     });
 
@@ -8545,7 +8606,7 @@ setTimeout(showWelcomeMsg, 100);
   const toolsDropdown = document.getElementById('toolsDropdown');
   const settingsBtn = document.getElementById('settingsBtn');
   const dashOverlay = document.getElementById('dashOverlay');
-  const dashClose = document.getElementById('dashClose');
+  const dashBackBtn = document.getElementById('dashBackBtn');
 
   let cmAll = [];
 
@@ -8766,7 +8827,7 @@ setTimeout(showWelcomeMsg, 100);
     e.stopPropagation();
     if(dashOverlay) dashOverlay.classList.add('open');
   });
-  if(dashClose) dashClose.addEventListener('click', ()=>{
+  if(dashBackBtn) dashBackBtn.addEventListener('click', ()=>{
     if(dashOverlay) dashOverlay.classList.remove('open');
   });
   if(dashOverlay) dashOverlay.addEventListener('click', (e)=>{
