@@ -5903,9 +5903,30 @@ async function handleAlexReply(userText, chatCid = ''){
         }
         bubble.innerHTML = renderAlexBubble(fullReply, true);
       }
-      // Cacher le widget thinking quand la réponse est terminée
+      // Garder le widget thinking visible mais replié quand la réponse est terminée
       const thinkWrap = msgDiv.querySelector('.alex-thinking-toggle')?.closest('div[style]');
-      if(thinkWrap) thinkWrap.style.display = 'none';
+      if(thinkWrap){
+        const thinkContent = msgDiv.querySelector('.alex-thinking-content');
+        const thinkText = thinkContent?.querySelector('.thinking-stream-text');
+        // Si du thinking a été généré, garder le widget visible et replié
+        if(thinkText && thinkText.textContent.trim()){
+          thinkWrap.style.display = '';
+          const toggleBtn = msgDiv.querySelector('.alex-thinking-toggle');
+          if(toggleBtn){
+            const label = toggleBtn.querySelector('.toggle-label');
+            if(label) label.textContent = 'Alex a réfléchi';
+            const badge = toggleBtn.querySelector('.thinking-badge');
+            if(badge) badge.textContent = '▶';
+          }
+          // Replier le contenu
+          if(thinkContent){
+            thinkContent.style.maxHeight = '0px';
+            thinkContent.style.opacity = '0';
+          }
+        } else {
+          thinkWrap.style.display = 'none';
+        }
+      }
       scrollToBottom();
       
       // Detecter si Alex demande une clarification
