@@ -317,6 +317,7 @@ def _save_interaction(user_msg: str, assistant_reply: str):
         memory.save_conversation("user", user_msg)
         memory.save_conversation("assistant", assistant_reply)
         _extract_user_data(user_msg)
+        asyncio.create_task(_extract_core_memory(user_msg))
     except Exception as e:
         logger.error("Erreur sauvegarde interaction: %s", e)
 
@@ -410,6 +411,111 @@ def _extract_user_data(message: str):
                     break
 
 
+async def _extract_core_memory(message: str):
+    """Extraction intelligente via LLM : analyse le message et sauvegarde les infos importantes."""
+    try:
+        current = memory.get_core_memory()
+        current_text = "\n".join(f"- {f['key']}: {f['value']}" for f in current) if current else "(aucune)"
+
+        extraction_prompt = (
+            "Tu es un système d'extraction de mémoire. Analyse le message utilisateur et "
+            "extrait TOUTES les informations importantes sur cette personne.\n\n"
+            "INFORMATIONS DÉJÀ CONNUES :\n" + current_text + "\n\n"
+            "MESSAGE UTILISATEUR :\n" + message + "\n\n"
+            "Règles :\n"
+            "- Extrais : nom, prénom, âge, ville, pays, métier, entreprise, études, "
+            "langages préférés, OS, projets, musique, nourriture, famille, animal, "
+            "couleur préférée, sport, rêve, objectif, problème actuel, outils utilisés, "
+            "clubs, associations, langue, religion, santé, habitudes.\n"
+            "- N'extrais QUE les nouvelles informations non déjà connues.\n"
+            "- Si le message ne contient aucune info personnelle, réponds exactement: RIEN\n"
+            "- Format de sortie (un par ligne, vide si rien) :\n"
+            "  cle:valeur:categorie:importance\n"
+            "  categories: user, preference, project, context, relationship\n"
+            "  importance: critical, high, medium, low\n"
+            "  Exemple: prenom:Jordy:user:critical\n"
+            "  Exemple: langage_favori:Python:preference:high\n"
+            "  Exemple: projet:Alex Mobile PWA:project:high\n"
+        )
+
+        client = await llm._get_client()
+        session_id = await llm._ensure_session("mimo-v2.5-free")
+
+        resp = await client.post(
+            f"{OPENCODE_API_URL}/session/{session_id}/prompt_async",
+            json={
+                "parts": [{"type": "text", "text": extraction_prompt}],
+                "model": llm._model_body("mimo-v2.5-free"),
+            },
+        )
+        if resp.status_code >= 400:
+            return
+
+        all_tokens = []
+        req_evt = client.build_request(
+            "GET",
+            f"{OPENCODE_API_URL}/event",
+            headers={"Accept": "text/event-stream", "x-opencode-directory": "/home/jordy/alex-workspace"},
+        )
+        r = await client.send(req_evt, stream=True)
+        try:
+            async for chunk in r.aiter_text():
+                for line in chunk.split("\n"):
+                    line = line.strip()
+                    if not line.startswith("data: "):
+                        continue
+                    try:
+                        evt = json.loads(line[6:])
+                    except json.JSONDecodeError:
+                        continue
+                    props = evt.get("properties", {})
+                    evt_type = evt.get("type", "")
+                    if props.get("sessionID") != session_id:
+                        continue
+                    if evt_type == "message.part.delta":
+                        field = props.get("field", "")
+                        delta = props.get("delta", "")
+                        if field == "text" and delta:
+                            all_tokens.append(delta)
+                    elif evt_type == "message.updated":
+                        info = props.get("info", {})
+                        if info.get("role") == "assistant" and info.get("finish"):
+                            break
+                    elif evt_type == "session.idle":
+                        break
+                else:
+                    continue
+                break
+        finally:
+            await r.aclose()
+
+        reply = "".join(all_tokens).strip()
+        if not reply or reply == "RIEN":
+            return
+
+        saved_count = 0
+        for line in reply.strip().split("\n"):
+            line = line.strip()
+            if not line or ":" not in line:
+                continue
+            parts = line.split(":")
+            if len(parts) >= 4:
+                key = parts[0].strip()
+                value = ":".join(parts[1:-2]).strip()
+                category = parts[-2].strip()
+                importance = parts[-1].strip()
+                if key and value and len(value) > 1:
+                    memory.save_core_memory(key, value, category, importance, source="auto_extract")
+                    saved_count += 1
+                    print(f"[brain] Core memory: {key}={value} ({category}/{importance})")
+
+        if saved_count > 0:
+            print(f"[brain] {saved_count} info(s) sauvegardée(s) en mémoire centrale.")
+
+    except Exception as e:
+        print(f"[brain] Erreur extraction core memory: {e}")
+
+
 def _get_tool_prompt(essential_only: bool = False) -> str:
     global _tool_descriptions
     if essential_only:
@@ -431,6 +537,9 @@ def _get_tool_prompt(essential_only: bool = False) -> str:
 def _build_agent_loop_prompt() -> str:
     parts = [AGENT_LOOP_PROMPT]
     try:
+        core = memory.build_core_memory_prompt()
+        if core:
+            parts.append(f"## 🧠 MÉMOIRE CENTRALE (permanente, ne jamais oublier){core}")
         facts = memory.get_all_facts()
         if facts:
             lines = "\n".join(f"  - {f['key']}: {f['value']}" for f in facts[:30])
@@ -447,6 +556,9 @@ def _build_system_prompt(with_memory: bool = True) -> str:
     if not with_memory:
         return base
     try:
+        core = memory.build_core_memory_prompt()
+        if core:
+            base += f"\n\n## 🧠 MÉMOIRE CENTRALE (permanente, ne jamais oublier){core}"
         facts = memory.get_all_facts()
         if facts:
             lines = "\n".join(f"  - {f['key']}: {f['value']}" for f in facts[:30])
@@ -454,7 +566,7 @@ def _build_system_prompt(with_memory: bool = True) -> str:
         level_info = memory.get_level()
         base += f"\n\n## Mon expérience\nNiveau {level_info['level']}, {level_info['total_interactions']} interactions à vie."
         base += "\n\n## RAPPEL IMPORTANT\n"
-        base += "- Tu as une mémoire longue durée. Utilise-la !\n"
+        base += "- Tu as une mémoire centrale permanente. Utilise-la !\n"
         base += "- Si on te donne une information personnelle, rappelle-la dans les conversations suivantes.\n"
         base += "- Retiens toujours les préférences, projets, famille, musique, nourriture, etc.\n"
         base += "- NE JAMAIS demander deux fois la même information déjà donnée.\n"
@@ -1026,6 +1138,30 @@ async def memory_learn(req: MemoryLearnRequest):
 async def memory_facts():
     try:
         return {"facts": memory.get_all_facts()}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/core-memory")
+async def get_core_memory_route():
+    try:
+        return {"core_memory": memory.get_core_memory()}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.post("/core-memory")
+async def save_core_memory_route(req):
+    try:
+        data = await req.json()
+        key = data.get("key", "")
+        value = data.get("value", "")
+        category = data.get("category", "user")
+        importance = data.get("importance", "high")
+        if key and value:
+            memory.save_core_memory(key, value, category, importance, source="manual")
+            return {"status": "ok", "key": key}
+        return {"error": "key and value required"}
     except Exception as e:
         return {"error": str(e)}
 

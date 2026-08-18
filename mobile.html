@@ -4439,6 +4439,11 @@ async function handleAlexReply(userText, chatCid = ''){
         }
       }
       if(fullReply.trim()) msgDiv.innerHTML = renderAlexBubble(fullReply, true);
+      // Cacher le widget thinking quand la réponse est terminée
+      const thinkToggle = msgDiv.querySelector('.alex-thinking-toggle');
+      if(thinkToggle) thinkToggle.style.display = 'none';
+      const thinkContent = msgDiv.querySelector('.alex-thinking-content');
+      if(thinkContent) thinkContent.style.display = 'none';
       scrollToBottom();
     }
     setStreaming(false);

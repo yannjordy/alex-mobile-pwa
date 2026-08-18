@@ -37,6 +37,16 @@ def init():
                 created_at TEXT DEFAULT (datetime('now','localtime')),
                 updated_at TEXT DEFAULT (datetime('now','localtime'))
             );
+            CREATE TABLE IF NOT EXISTS core_memory (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                key TEXT UNIQUE NOT NULL,
+                value TEXT NOT NULL,
+                category TEXT NOT NULL DEFAULT 'user',
+                importance TEXT NOT NULL DEFAULT 'high',
+                source TEXT DEFAULT 'auto',
+                created_at TEXT DEFAULT (datetime('now','localtime')),
+                updated_at TEXT DEFAULT (datetime('now','localtime'))
+            );
             CREATE TABLE IF NOT EXISTS daily_learnings (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 day TEXT NOT NULL UNIQUE,
@@ -218,6 +228,70 @@ def get_level() -> dict:
             "xp_to_next": max(0, next_at),
             "total_interactions": row["interactions"] or 0,
         }
+
+
+# --- Core Memory (mémoire permanente, indestructible) ---
+
+def save_core_memory(key: str, value: str, category: str = "user", importance: str = "high", source: str = "auto"):
+    """Sauvegarde une information dans la mémoire centrale. Ne peut PAS être supprimée."""
+    with _conn() as db:
+        db.execute(
+            """INSERT INTO core_memory (key, value, category, importance, source, updated_at)
+               VALUES (?, ?, ?, ?, ?, datetime('now','localtime'))
+               ON CONFLICT(key) DO UPDATE SET
+                   value=excluded.value,
+                   category=excluded.category,
+                   importance=excluded.importance,
+                   source=excluded.source,
+                   updated_at=datetime('now','localtime')""",
+            (key, value, category, importance, source),
+        )
+
+
+def get_core_memory(key: str = None) -> list[dict] | dict | None:
+    """Récupère la mémoire centrale. Si key est None, retourne tout."""
+    with _conn() as db:
+        if key:
+            r = db.execute("SELECT * FROM core_memory WHERE key = ?", (key,)).fetchone()
+            return dict(r) if r else None
+        return [dict(r) for r in db.execute("SELECT * FROM core_memory ORDER BY category, importance DESC").fetchall()]
+
+
+def get_core_memory_by_category(category: str) -> list[dict]:
+    """Récupère la mémoire centrale par catégorie."""
+    with _conn() as db:
+        return [dict(r) for r in db.execute(
+            "SELECT * FROM core_memory WHERE category = ? ORDER BY importance DESC", (category,)
+        ).fetchall()]
+
+
+def build_core_memory_prompt() -> str:
+    """Construit le bloc de mémoire centrale pour le system prompt."""
+    facts = get_core_memory()
+    if not facts:
+        return ""
+    lines = []
+    current_cat = None
+    for f in facts:
+        cat = f["category"]
+        if cat != current_cat:
+            cat_labels = {
+                "user": "👤 Utilisateur",
+                "context": "📋 Contexte",
+                "preference": "⚙️ Préférences",
+                "project": "🚀 Projets",
+                "relationship": "👥 Relations",
+            }
+            lines.append(f"\n### {cat_labels.get(cat, cat)}")
+            current_cat = cat
+        lines.append(f"- {f['key']}: {f['value']}")
+    return "\n".join(lines)
+
+
+def clear_core_memory():
+    """Ne fait RIEN — la mémoire centrale est indestructible."""
+    print("[memory] ⚠️ Tentative de suppression de la mémoire centrale bloquée.")
+    pass
 
 
 # --- Initialisation ---
